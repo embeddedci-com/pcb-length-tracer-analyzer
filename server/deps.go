@@ -124,6 +124,19 @@ type Deps struct {
 	// MaxSessionsPerUser caps how many boards one user may have in flight.
 	// Zero means DefaultMaxSessionsPerUser.
 	MaxSessionsPerUser int
+
+	// MaxRouteJobs is how many router runs may go at once, MaxHeavyJobs how
+	// many applies and room measurements. Zero means the defaults. Each of
+	// these can hold hundreds of MB, and one process serves every user.
+	MaxRouteJobs, MaxHeavyJobs int
+
+	// RouteTimeout ends a router run that goes on longer. Zero means
+	// DefaultRouteTimeout.
+	RouteTimeout time.Duration
+
+	// JobWait is how long a request waits for a free slot before it is told
+	// the server is busy. Zero means DefaultJobWait.
+	JobWait time.Duration
 }
 
 // Defaults for the knobs on Deps.
@@ -137,6 +150,10 @@ const (
 	DefaultSessionTTL         = 4 * time.Hour
 	DefaultMaxUploadBytes     = 64 << 20
 	DefaultMaxSessionsPerUser = 20
+	DefaultMaxRouteJobs       = 1
+	DefaultMaxHeavyJobs       = 2
+	DefaultRouteTimeout       = 3 * time.Minute
+	DefaultJobWait            = 20 * time.Second
 )
 
 func (d *Deps) now() time.Time {
@@ -172,4 +189,18 @@ func (d *Deps) maxSessions() int {
 		return d.MaxSessionsPerUser
 	}
 	return DefaultMaxSessionsPerUser
+}
+
+func (d *Deps) routeTimeout() time.Duration {
+	if d.RouteTimeout > 0 {
+		return d.RouteTimeout
+	}
+	return DefaultRouteTimeout
+}
+
+func (d *Deps) jobWait() time.Duration {
+	if d.JobWait > 0 {
+		return d.JobWait
+	}
+	return DefaultJobWait
 }

@@ -372,6 +372,11 @@ func (s *Service) handleApply(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	release, ok := s.job(w, r, heavyJob)
+	if !ok {
+		return
+	}
+	defer release()
 	var req ApplyRequest
 	if err := decodeJSON(r, &req); err != nil {
 		s.fail(w, r, http.StatusBadRequest, err)
@@ -524,6 +529,11 @@ func (s *Service) handleHeadroom(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	release, ok := s.job(w, r, heavyJob)
+	if !ok {
+		return
+	}
+	defer release()
 	b, proj, err := s.reload(r, sess)
 	if err != nil {
 		s.fail(w, r, http.StatusNotFound, err)

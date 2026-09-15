@@ -91,7 +91,14 @@ func (g *grid) search(starts, goals []cell, net string, c costs, viaOK func(cell
 		heap.Push(open, &queued{n: n, f: h(s)})
 	}
 
-	for open.Len() > 0 {
+	for pops := 0; open.Len() > 0; pops++ {
+		if g.stop != nil && pops&1023 == 0 {
+			select {
+			case <-g.stop:
+				return nil
+			default:
+			}
+		}
 		cur := heap.Pop(open).(*queued)
 		if d, ok := dist[cur.n]; !ok || cur.f-h(cur.n.c) > d+1e-9 {
 			continue // a stale entry

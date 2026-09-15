@@ -62,6 +62,11 @@ func (s *Service) handleSuggestAreas(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	release, ok := s.job(w, r, heavyJob)
+	if !ok {
+		return
+	}
+	defer release()
 	b, proj, err := s.reload(r, sess)
 	if err != nil {
 		s.fail(w, r, http.StatusNotFound, err)

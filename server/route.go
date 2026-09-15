@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -91,6 +92,11 @@ func (s *Service) handleRoute(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	release, ok := s.job(w, r, routeJob)
+	if !ok {
+		return
+	}
+	defer release()
 	b, proj, err := s.reload(r, sess)
 	if err != nil {
 		s.fail(w, r, http.StatusNotFound, err)
@@ -167,8 +173,21 @@ func (s *Service) handleRoute(w http.ResponseWriter, r *http.Request) {
 				"not make may be one your own rules would have allowed")
 	}
 
+	// Stop the search when the caller goes away or it runs too long: the
+	// router holds its grid and search state until it returns.
+	ctx, cancel := context.WithTimeout(r.Context(), s.deps.routeTimeout())
+	defer cancel()
+	opt.Stop = ctx.Done()
+
 	results, err := runRouter(b, proj, reqs, opt)
-	if err != nil {
+	switch {
+	case errors.Is(err, route.ErrStopped) && r.Context().Err() != nil:
+		return // nobody is waiting for the answer
+	case errors.Is(err, route.ErrStopped):
+		out.Notes = append(out.Notes, fmt.Sprintf(
+			"the router stopped after %s; what it connected so far is kept, and running it again "+
+				"carries on with the rest", s.deps.routeTimeout()))
+	case err != nil:
 		s.fail(w, r, http.StatusBadRequest, err)
 		return
 	}

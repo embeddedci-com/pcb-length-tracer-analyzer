@@ -11,6 +11,7 @@ import (
 // Service is the mounted control plane.
 type Service struct {
 	deps Deps
+	jobs *jobSlots
 }
 
 // New builds a service. A nil Store is an error the host should not be able to
@@ -19,7 +20,7 @@ func New(d Deps) *Service {
 	if d.Store == nil {
 		panic("pcb-trace-length-analyzer: Deps.Store is required")
 	}
-	return &Service{deps: d}
+	return &Service{deps: d, jobs: newJobSlots(&d)}
 }
 
 // Mount registers the routes under a prefix.

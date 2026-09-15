@@ -126,3 +126,33 @@ func TestAPackageLengthOverrideMovesThatNetOnly(t *testing.T) {
 		}
 	}
 }
+
+// RESETN is on the controller but not length matched, so it is not a pad
+// missing a package length.
+func TestPackagePadsAreTheMatchedNetsOnly(t *testing.T) {
+	path := filepath.Join("../demo-pcb-2", "ai-vision.kicad_pcb")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Skip(err)
+	}
+	b, err := board.Parse(raw, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proj, _ := board.LoadProject(path)
+	a, _, err := analyse(b, proj, "ai-vision.kicad_pcb", DefaultParams(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range a.PackagePads {
+		if strings.HasSuffix(p.Net, "RESETN") {
+			t.Errorf("RESETN listed: %+v", p)
+		}
+		if p.MM <= 0 {
+			t.Errorf("%s has no package length", p.Net)
+		}
+	}
+	if len(a.PackagePads) < 60 {
+		t.Errorf("only %d pads", len(a.PackagePads))
+	}
+}

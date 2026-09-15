@@ -1,6 +1,7 @@
 package route
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -389,3 +390,35 @@ func TestNewRefusesNothingToDo(t *testing.T) {
 }
 
 var _ = math.Abs
+
+// A closed Stop ends routing before anything is laid, and a grid over the
+// limit is refused before it is allocated.
+func TestStopAndMaxCells(t *testing.T) {
+	s := &fixture{}
+	s.pad("A", "N1", geom.Pt{X: 10, Y: 30})
+	s.pad("B", "N1", geom.Pt{X: 40, Y: 30})
+	b, p := s.build(t)
+	req := Request{Net: "N1", From: "A.1", To: "B.1"}
+
+	o := opts("F.Cu")
+	stop := make(chan struct{})
+	close(stop)
+	o.Stop = stop
+	r, err := New(b, p, []Request{req}, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := r.Route([]Request{req})
+	if !errors.Is(err, ErrStopped) {
+		t.Errorf("err = %v, want ErrStopped", err)
+	}
+	if len(res) != 1 || res[0].Routed || joined(b, "N1", "A.1", "B.1") {
+		t.Error("a stopped router laid copper")
+	}
+
+	o = opts("F.Cu")
+	o.MaxCells = 100
+	if _, err := New(b, p, []Request{req}, o); err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Errorf("a 100-cell limit was not enforced: %v", err)
+	}
+}

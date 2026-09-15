@@ -1049,7 +1049,7 @@ func analyse(b *board.Board, proj *board.Project, filename string, p Params, sv 
 
 	a := &Analysis{Params: p, Skipped: plan.Skipped, spacing: withPairs(p.openSpacing(iface), b), areas: areas}
 	a.PackageLengths = pkgs
-	a.PackagePads = pads
+	a.PackagePads = matchedPads(pads, plan)
 	// No note for missing package lengths: the page warns about it with a
 	// way to fix it, and the report prints its own section.
 
@@ -1441,6 +1441,25 @@ func ifaceNets(iface *ddr.Interface) []string {
 	out := make([]string, 0, len(iface.Signals))
 	for n := range iface.Signals {
 		out = append(out, n)
+	}
+	return out
+}
+
+// matchedPads keeps the pads on nets some group matches. A line that is not
+// length matched, such as RESETN, needs no package length, and ST's sheet
+// gives it none.
+func matchedPads(pads []pkglen.PadLength, plan *ddr.Plan) []pkglen.PadLength {
+	inGroup := map[string]bool{}
+	for _, g := range plan.Groups {
+		for _, m := range g.Members {
+			inGroup[m.Net] = true
+		}
+	}
+	out := pads[:0:0]
+	for _, p := range pads {
+		if inGroup[p.Net] {
+			out = append(out, p)
+		}
 	}
 	return out
 }

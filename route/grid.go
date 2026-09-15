@@ -38,6 +38,9 @@ type grid struct {
 	// everything too close belongs to that one net, and blocked when it is
 	// something a route cannot share with.
 	owner []string
+
+	// stop ends a search early when closed; nil never does.
+	stop <-chan struct{}
 }
 
 // blocked marks a cell nothing may route through.

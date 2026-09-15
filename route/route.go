@@ -28,6 +28,7 @@
 package route
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -72,7 +73,24 @@ type Options struct {
 	// relax the clearance inside a BGA courtyard that means it cannot escape a
 	// ball at all.
 	Rules *board.Rules
+
+	// Stop, when closed, ends routing early: Route returns what it has with
+	// ErrStopped. Nil never stops. A server closes it when the request is
+	// cancelled or runs out of time, so an abandoned route stops using memory
+	// and CPU instead of finishing for nobody.
+	Stop <-chan struct{}
+
+	// MaxCells caps the search grid (cells times layers). Zero takes
+	// DefaultMaxCells. Larger spans are refused rather than allocated.
+	MaxCells int
 }
+
+// DefaultMaxCells is the largest grid the router will build: about 20 million
+// cells, a few hundred MB of grid and search state.
+const DefaultMaxCells = 20_000_000
+
+// ErrStopped is returned when Options.Stop closed before routing finished.
+var ErrStopped = errors.New("route: stopped before it finished")
 
 // DefaultOptions are conservative settings.
 func DefaultOptions() Options {
@@ -132,7 +150,13 @@ type Router struct {
 // the search space is sized from them.
 func New(b *board.Board, proj *board.Project, reqs []Request, opt Options) (*Router, error) {
 	if opt.MaxRipUp <= 0 {
-		opt = DefaultOptions()
+		d := DefaultOptions()
+		d.Layers, d.Width, d.ViaDiameter, d.ViaDrill, d.Rules, d.Stop, d.MaxCells =
+			opt.Layers, opt.Width, opt.ViaDiameter, opt.ViaDrill, opt.Rules, opt.Stop, opt.MaxCells
+		opt = d
+	}
+	if opt.MaxCells <= 0 {
+		opt.MaxCells = DefaultMaxCells
 	}
 	if len(reqs) == 0 {
 		return nil, fmt.Errorf("route: nothing to route")
@@ -188,7 +212,13 @@ func New(b *board.Board, proj *board.Project, reqs []Request, opt Options) (*Rou
 	}
 	nx := int(math.Ceil((box.MaxX-box.MinX)/pitch)) + 1
 	ny := int(math.Ceil((box.MaxY-box.MinY)/pitch)) + 1
+	if cells := nx * ny * len(r.layers); cells > opt.MaxCells {
+		return nil, fmt.Errorf("route: the area to route is too large (%.0f by %.0f mm on %d layers at a %.3f mm grid, "+
+			"%d cells, limit %d); route fewer connections at a time", box.MaxX-box.MinX, box.MaxY-box.MinY,
+			len(r.layers), pitch, cells, opt.MaxCells)
+	}
 	r.g = newGrid(geom.Pt{X: box.MinX, Y: box.MinY}, pitch, nx, ny, r.layers)
+	r.g.stop = opt.Stop
 	r.g.rasterise(r.chk, net, r.width)
 	return r, nil
 }
@@ -297,6 +327,9 @@ func (r *Router) Route(reqs []Request) ([]*Result, error) {
 	for round := 0; len(queue) > 0 && round <= r.opt.MaxRipUp; round++ {
 		var failed []Request
 		for _, q := range queue {
+			if r.stopped() {
+				return out, ErrStopped
+			}
 			res := results[key(q)]
 			if err := r.one(q, res); err != nil {
 				return out, err
@@ -333,6 +366,15 @@ func (r *Router) Route(reqs []Request) ([]*Result, error) {
 }
 
 func key(q Request) string { return q.Net + "|" + q.From + "|" + q.To }
+
+func (r *Router) stopped() bool {
+	select {
+	case <-r.opt.Stop:
+		return true
+	default:
+		return false
+	}
+}
 
 // straight is the direct distance between a request's pads, which stands in for
 // how hard it will be.
