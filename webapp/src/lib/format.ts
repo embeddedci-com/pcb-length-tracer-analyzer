@@ -14,6 +14,7 @@ import type {
   DetectedInterface,
   GroupInfo,
   HeadroomResponse,
+  LengthParts,
   MemberInfo,
   Params,
 } from './analyzerApi'
@@ -694,4 +695,25 @@ export function packageStatus(a: Analysis): PackageStatus | null {
     total: pads.length,
     source: names.join(', '),
   }
+}
+
+/**
+ * A length written out as the sum it is: track, then whatever else was counted.
+ *
+ * Only the parts that contribute are shown, so a net with no vias does not
+ * carry a "+ 0 vias" a reader has to skip, and one that crosses two says so
+ * where its length is. The pieces add up to the length exactly.
+ */
+export function lengthSum(p: LengthParts | undefined | null): string | null {
+  if (!p) return null
+  const terms = [`${mm(p.track_mm)} track`]
+  if (p.vias > 0 && p.via_mm > 0) terms.push(`${mm(p.via_mm)} ${p.vias === 1 ? 'via' : `${p.vias} vias`}`)
+  if (p.pad_mm > 0.0005) terms.push(`${mm(p.pad_mm)} pads`)
+  if (p.package_mm > 0) terms.push(`${mm(p.package_mm)} package`)
+  return terms.join(' + ')
+}
+
+/** Whether a length includes anything besides track: vias or package. */
+export function countsMoreThanTrack(p: LengthParts | undefined | null): boolean {
+  return Boolean(p && ((p.vias > 0 && p.via_mm > 0) || p.package_mm > 0))
 }

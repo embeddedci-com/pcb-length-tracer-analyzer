@@ -10,7 +10,7 @@
 
 import { Badge, Card, Group, List, Stack, Table, Text, Title, Tooltip } from '@mantine/core'
 import type { GroupInfo, MemberInfo } from '../lib/analyzerApi'
-import { NOWRAP, groupSummary, memberSeverity, mm, ps, signedMM } from '../lib/format'
+import { NOWRAP, countsMoreThanTrack, groupSummary, lengthSum, memberSeverity, mm, ps, signedMM } from '../lib/format'
 import { ToleranceBar } from './ToleranceBar'
 import { NetName, SelectNetsButton } from './HostActions'
 
@@ -80,6 +80,17 @@ function MemberRow({ m, tolerance }: { m: MemberInfo; tolerance: number }) {
         <Text size="sm" ff="monospace" style={NOWRAP}>
           {mm(m.length_mm)}
         </Text>
+        {/* The sum the length is, whenever it is more than track: a via or a
+            package is millimetres, and the reader comparing with KiCad needs
+            to see it was counted. Pad entry alone is too small to earn a line,
+            but it is in the tooltip. */}
+        {m.parts && (
+          <Tooltip label={`= ${lengthSum(m.parts)}`} openDelay={300}>
+            <Text size="xs" ff="monospace" c="dimmed" style={NOWRAP}>
+              {countsMoreThanTrack(m.parts) ? `= ${lengthSum(m.parts)}` : 'track + pads'}
+            </Text>
+          </Tooltip>
+        )}
       </Table.Td>
       <Table.Td>
         <Text size="sm" ff="monospace" style={NOWRAP} c="dimmed">
@@ -221,6 +232,11 @@ export function GroupTable({
             </Table.Tbody>
           </Table>
         </Table.ScrollContainer>
+
+        <Text size="xs" c="dimmed" ff="monospace">
+          length = track + vias + pads + package · Δ = length − {mm(group.target_mm)} · within tolerance
+          when |Δ| ≤ {mm(group.tolerance_mm)}
+        </Text>
 
         {(group.notes?.length ?? 0) > 0 && (
           <List size="sm" spacing={4} c="dimmed">

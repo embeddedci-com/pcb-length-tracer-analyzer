@@ -69,6 +69,10 @@ type edge struct {
 	delay  float64
 	via    bool
 
+	// parts is what length is made of, for telling a reader where each
+	// millimetre of a route came from. It always sums to length.
+	parts Parts
+
 	// track is the copper this edge is a piece of, so a caller can be told
 	// which tracks a route actually runs over. That matters for tuning: a net
 	// whose copper is in more than one island has tracks that are on no route
@@ -84,16 +88,28 @@ func (g *graph) node(p geom.Pt) int {
 	return id
 }
 
-func (g *graph) link(a, b int, length, delay float64, via bool) {
-	g.linkTrack(a, b, length, delay, via, nil)
+// linkPad joins a pad's anchor to copper: the straight run from the pad centre
+// to where the copper touches it, plus the pad's package length.
+func (g *graph) linkPad(a, b int, entry, die, psPerMM float64) {
+	g.add(a, b, edge{length: entry + die, delay: (entry + die) * psPerMM, parts: Parts{PadMM: entry, PackageMM: die}})
 }
 
 func (g *graph) linkTrack(a, b int, length, delay float64, via bool, tr *board.Track) {
+	parts := Parts{TrackMM: length}
+	if via {
+		parts = Parts{ViaMM: length}
+	}
+	g.add(a, b, edge{length: length, delay: delay, via: via, track: tr, parts: parts})
+}
+
+func (g *graph) add(a, b int, e edge) {
 	if a == b || a < 0 || b < 0 {
 		return
 	}
-	g.adj[a] = append(g.adj[a], edge{to: b, length: length, delay: delay, via: via, track: tr})
-	g.adj[b] = append(g.adj[b], edge{to: a, length: length, delay: delay, via: via, track: tr})
+	e.to = b
+	g.adj[a] = append(g.adj[a], e)
+	e.to = a
+	g.adj[b] = append(g.adj[b], e)
 }
 
 // union is a plain union-find, used to track which pieces of a net are already
@@ -392,8 +408,7 @@ func (e *Engine) buildGraph(net string) (*graph, map[string]int) {
 			if p.Shape.DistToPoint(terms[k].p) > terms[k].half {
 				continue
 			}
-			d := p.Centre.Dist(terms[k].p) + die
-			g.link(pn, termNode(k), d, d*psPerMM, false)
+			g.linkPad(pn, termNode(k), p.Centre.Dist(terms[k].p), die, psPerMM)
 			attached = true
 		}
 		if attached {
@@ -426,8 +441,7 @@ func (e *Engine) buildGraph(net string) (*graph, map[string]int) {
 		a := total * bestAt
 		g.linkTrack(termNode(2*bestIdx), mid, a, a*perMM, false, t)
 		g.linkTrack(mid, termNode(2*bestIdx+1), total-a, (total-a)*perMM, false, t)
-		d := best + die
-		g.link(pn, mid, d, d*psPerMM, false)
+		g.linkPad(pn, mid, best, die, psPerMM)
 	}
 	return g, padNode
 }
@@ -446,15 +460,16 @@ func firstLayerOf(p *board.Pad, order []string) string {
 // dijkstra returns the shortest length to every node from src, with the delay
 // and the number of via half-barrels along that same route.
 func (g *graph) dijkstra(src int) (dist, delay []float64, vias []int) {
-	dist, delay, vias, _, _ = g.dijkstraFrom(src)
+	dist, delay, vias, _, _, _ = g.dijkstraFrom(src)
 	return dist, delay, vias
 }
 
 // dijkstraFrom also returns, for each node, the node it was reached from and
 // the track that edge belongs to, so a route can be walked back into the set
 // of tracks it runs over.
-func (g *graph) dijkstraFrom(src int) (dist, delay []float64, vias, prev []int, via []*board.Track) {
+func (g *graph) dijkstraFrom(src int) (dist, delay []float64, vias, prev []int, via []*board.Track, parts []Parts) {
 	n := len(g.adj)
+	parts = make([]Parts, n)
 	dist = make([]float64, n)
 	delay = make([]float64, n)
 	vias = make([]int, n)
@@ -477,6 +492,7 @@ func (g *graph) dijkstraFrom(src int) (dist, delay []float64, vias, prev []int, 
 			if nd < dist[ed.to]-1e-12 {
 				dist[ed.to] = nd
 				delay[ed.to] = delay[it.n] + ed.delay
+				parts[ed.to] = parts[it.n].plus(ed.parts)
 				vias[ed.to] = vias[it.n]
 				prev[ed.to] = it.n
 				via[ed.to] = ed.track
@@ -487,7 +503,7 @@ func (g *graph) dijkstraFrom(src int) (dist, delay []float64, vias, prev []int, 
 			}
 		}
 	}
-	return dist, delay, vias, prev, via
+	return dist, delay, vias, prev, via, parts
 }
 
 // tracksOnRoute walks the predecessor chain from dst back to the source and

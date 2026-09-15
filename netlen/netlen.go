@@ -47,6 +47,10 @@ type Path struct {
 	// Found is false when no copper joins the two pads.
 	Found bool
 
+	// Parts is Length taken apart: track, via barrels, pad entry and package.
+	// It always sums to Length.
+	Parts Parts
+
 	// Tracks are the uuids of the copper the route runs over.
 	//
 	// A net can have copper that is on no route at all -- a dangling stub, or
@@ -56,6 +60,35 @@ type Path struct {
 	// actually on the path being changed.
 	Tracks []string
 }
+
+// Parts is what a route's length is made of.
+//
+// The length a group is matched on is not only track: a via adds its barrel
+// when the board counts via height, a pad adds the run from its centre to
+// where the track meets it, and a pad with a package length adds the wiring
+// inside the chip. Each can be millimetres, and a reader checking a figure
+// against KiCad needs to see which were counted.
+type Parts struct {
+	// TrackMM is the centreline length of the tracks and arcs on the route.
+	TrackMM float64
+	// ViaMM is the via barrels crossed: each via's full height from its top
+	// copper layer to its bottom one, from the stack-up, whichever layers the
+	// route uses it between -- which is how KiCad counts it. Zero when the
+	// board does not count via height.
+	ViaMM float64
+	// PadMM is the straight run from each end pad's centre to where the
+	// route's copper touches the pad.
+	PadMM float64
+	// PackageMM is each end pad's package (die) length.
+	PackageMM float64
+}
+
+func (p Parts) plus(q Parts) Parts {
+	return Parts{p.TrackMM + q.TrackMM, p.ViaMM + q.ViaMM, p.PadMM + q.PadMM, p.PackageMM + q.PackageMM}
+}
+
+// Sum is the length the parts add up to.
+func (p Parts) Sum() float64 { return p.TrackMM + p.ViaMM + p.PadMM + p.PackageMM }
 
 // Measure is everything known about one net's routing.
 type Measure struct {
@@ -191,7 +224,7 @@ func (e *Engine) Measure(net string) *Measure {
 	}
 	sort.Strings(ids)
 	for i, a := range ids {
-		distL, distD, distV, prev, viaOf := g.dijkstraFrom(padNode[a])
+		distL, distD, distV, prev, viaOf, parts := g.dijkstraFrom(padNode[a])
 		for _, other := range ids[i+1:] {
 			n := padNode[other]
 			p := Path{From: a, To: other}
@@ -200,6 +233,7 @@ func (e *Engine) Measure(net string) *Measure {
 				p.Length = d
 				p.Delay = distD[n]
 				p.Vias = distV[n] / 2
+				p.Parts = parts[n]
 				p.Tracks = tracksOnRoute(prev, viaOf, n)
 			}
 			m.Paths[pairKey(a, other)] = p

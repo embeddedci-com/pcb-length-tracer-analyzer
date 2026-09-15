@@ -74,6 +74,8 @@ export interface BoardInfo {
   /** What became of that .kicad_dru: how many rules are applied, and which were left alone. */
   custom_rules?: CustomRulesInfo
   via_length_counted: boolean
+  /** What one via through the whole board adds when via height is counted. */
+  via_barrel_mm?: number
   /** False when no .kicad_pro was uploaded, in which case every clearance fell back to the board minimum. */
   has_project_file: boolean
 }
@@ -380,6 +382,23 @@ export interface ChainInfo {
   complete: boolean
 }
 
+/**
+ * A measured length taken apart. The four lengths add up to the length they
+ * belong to, so the report can show what it counted.
+ */
+export interface LengthParts {
+  /** Centreline length of the tracks and arcs on the route. */
+  track_mm: number
+  /** Via barrels crossed: each via's height through the stack-up. Zero when the board does not count via height. */
+  via_mm: number
+  /** How many vias the route crosses. */
+  vias: number
+  /** From each end pad's centre to where the track meets the pad. */
+  pad_mm: number
+  /** The wiring inside the chip package at each end: the pad's die length. */
+  package_mm: number
+}
+
 export interface MemberInfo {
   net: string
   label: string
@@ -389,6 +408,8 @@ export interface MemberInfo {
   delay_ps: number
   /** Signed distance from the group target; negative means short. */
   deviation_mm: number
+  /** length_mm taken apart: track, vias, pad entry, package. */
+  parts?: LengthParts
   /** How much has to be added. Never negative: a meander cannot shorten a track. */
   need_mm: number
   need_ps: number
@@ -443,6 +464,7 @@ export interface CandidateLeg {
   group: string
   leg?: string
   length_mm: number
+  parts?: LengthParts
   need_mm: number
   /** How much too long this leg is for its target: nothing to add, it needs routing shorter. */
   excess_mm?: number
@@ -464,7 +486,7 @@ export interface GroupInfo {
   /** The reference length: the mean of its halves when it is a pair. */
   reference_length_mm: number
   /** The halves the reference length is the mean of, with their own lengths. */
-  reference_members?: { net: string; label: string; length_mm: number }[]
+  reference_members?: { net: string; label: string; length_mm: number; parts?: LengthParts }[]
   /** What every member is brought to. */
   target_mm: number
   /** What the reference asked for, before the target was raised to clear the longest member. */
@@ -721,6 +743,7 @@ export interface NetStatus {
   reference?: boolean
   routed: boolean
   length_mm: number
+  parts?: LengthParts
   target_mm: number
   tolerance_mm: number
   /** Signed: negative is short. */

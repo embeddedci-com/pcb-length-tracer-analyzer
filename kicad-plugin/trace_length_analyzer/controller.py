@@ -30,6 +30,19 @@ class ApplyDisabled(RuntimeError):
     """Applying to the board is switched off in this version."""
 
 
+def _includes(parts: Optional[Dict[str, Any]]) -> str:
+    """What a length counts besides track, when it does: " incl. 2 vias, package"."""
+    if not parts:
+        return ""
+    extra = []
+    vias = int(parts.get("vias") or 0)
+    if vias and (parts.get("via_mm") or 0) > 0:
+        extra.append(f"{vias} via{'s' if vias != 1 else ''} {parts['via_mm']:.3f} mm")
+    if (parts.get("package_mm") or 0) > 0:
+        extra.append(f"package {parts['package_mm']:.3f} mm")
+    return f" (incl. {', '.join(extra)})" if extra else ""
+
+
 def format_row(row: Dict[str, Any]) -> str:
     """One net's standing in a sentence: what it is, and what to do about it."""
     # DDR groups already carry their leg in the name ("address/command U3->U4").
@@ -38,7 +51,7 @@ def format_row(row: Dict[str, Any]) -> str:
     head = f"{row['label']} ({row['interface']} / {where})"
     if not row.get("routed"):
         return f"{head}: not routed"
-    length = f"{row['length_mm']:.3f} mm"
+    length = f"{row['length_mm']:.3f} mm{_includes(row.get('parts'))}"
     target = f"target {row['target_mm']:.3f} ±{row['tolerance_mm']:.3f}"
     if row.get("reference"):
         return f"{head}: {length} — the reference this group is matched to"

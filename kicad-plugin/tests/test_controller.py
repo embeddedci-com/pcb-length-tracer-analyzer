@@ -78,6 +78,10 @@ def test_format_row_states_the_action():
     legged = {**row, "group": "address/command U3->U4", "leg": "U3->U4"}
     assert "U3->U4 U3->U4" not in format_row(legged)
     assert "(DDR / byte lane 2 U4->U5)" in format_row({**row, "leg": "U4->U5"})
+    withparts = {**row, "parts": {"track_mm": 47.0, "via_mm": 3.188, "vias": 2, "pad_mm": 0.01, "package_mm": 4.07}}
+    assert "54.200 mm (incl. 2 vias 3.188 mm, package 4.070 mm) (too short)" in format_row(withparts)
+    off = {**row, "parts": {"track_mm": 54.2, "via_mm": 0, "vias": 2, "pad_mm": 0, "package_mm": 0}}
+    assert "incl." not in format_row(off)
 
 
 def test_apply_is_switched_off(controller):

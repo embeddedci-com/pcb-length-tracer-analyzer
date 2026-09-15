@@ -323,6 +323,11 @@ type BoardInfo struct {
 	CustomRules   *CustomRulesInfo `json:"custom_rules,omitempty"`
 	ViaLengthUsed bool             `json:"via_length_counted"`
 
+	// ViaBarrelMM is what one through via adds when via height is counted:
+	// the stack-up from the top of the first copper layer to the bottom of
+	// the last. Zero when the stack-up is unknown.
+	ViaBarrelMM float64 `json:"via_barrel_mm,omitempty"`
+
 	// HasProjectFile is false when no .kicad_pro was supplied, in which case
 	// every clearance resolved to the board minimum rather than to the net
 	// class the designer set. The UI says so, because it changes what a clean
@@ -440,6 +445,10 @@ type MemberInfo struct {
 	LengthMM    float64 `json:"length_mm"`
 	DelayPS     float64 `json:"delay_ps"`
 	DeviationMM float64 `json:"deviation_mm"`
+
+	// Parts is LengthMM taken apart: track, vias, pad entry, package.
+	Parts *LengthParts `json:"parts,omitempty"`
+
 	NeedMM      float64 `json:"need_mm"`
 	NeedPS      float64 `json:"need_ps"`
 	InTolerance bool    `json:"in_tolerance"`
@@ -521,6 +530,9 @@ type CandidateLeg struct {
 	Group string `json:"group"`
 	Leg   string `json:"leg,omitempty"`
 
+	// Parts is this leg's length taken apart.
+	Parts *LengthParts `json:"parts,omitempty"`
+
 	LengthMM float64 `json:"length_mm"`
 	NeedMM   float64 `json:"need_mm"`
 
@@ -556,9 +568,33 @@ type CheckInfo struct {
 
 // ReferenceHalf is one half of a group's reference pair.
 type ReferenceHalf struct {
-	Net      string  `json:"net"`
-	Label    string  `json:"label"`
-	LengthMM float64 `json:"length_mm"`
+	Net      string       `json:"net"`
+	Label    string       `json:"label"`
+	LengthMM float64      `json:"length_mm"`
+	Parts    *LengthParts `json:"parts,omitempty"`
+}
+
+// LengthParts is a measured length taken apart, so the report can show what
+// was counted: the tracks, the via barrels, the run from each end pad's centre
+// to the track, and the package inside the chip. The four add up to the length.
+type LengthParts struct {
+	TrackMM   float64 `json:"track_mm"`
+	ViaMM     float64 `json:"via_mm"`
+	Vias      int     `json:"vias"`
+	PadMM     float64 `json:"pad_mm"`
+	PackageMM float64 `json:"package_mm"`
+}
+
+func lengthParts(p netlen.Parts, vias int) *LengthParts {
+	return &LengthParts{TrackMM: p.TrackMM, ViaMM: p.ViaMM, Vias: vias, PadMM: p.PadMM, PackageMM: p.PackageMM}
+}
+
+// routeParts is the parts of a net's longest route, or nil when it has none.
+func routeParts(e *netlen.Engine, net string) *LengthParts {
+	if m := e.Measure(net); m != nil && m.Longest.Found {
+		return lengthParts(m.Longest.Parts, m.Longest.Vias)
+	}
+	return nil
 }
 
 // GroupInfo is a set of nets that have to match.
@@ -947,6 +983,7 @@ func boardInfo(b *board.Board, proj *board.Project, filename string) BoardInfo {
 		Footprints: len(b.Footprints), Pads: len(b.Pads), Tracks: tracks, Vias: vias,
 		NetClasses: proj.ClassNames(), HasCustomDRU: proj.HasCustomRules,
 		ViaLengthUsed: b.UseHeightForLength, HasProjectFile: len(proj.Classes) > 0,
+		ViaBarrelMM: viaBarrel(b),
 	}
 	if r := customRules(b, proj); r != nil {
 		applied, skipped := r.Understood()
@@ -1095,6 +1132,7 @@ func analyse(b *board.Board, proj *board.Project, filename string, p Params, sv 
 			gi.Members = append(gi.Members, MemberInfo{
 				Net: m.Net, Label: label(m.Net), Role: m.Role.String(), Routed: m.Routed,
 				LengthMM: m.Length, DelayPS: m.Delay, DeviationMM: m.Deviation,
+				Parts:  memberParts(m),
 				NeedMM: m.Need, NeedPS: m.NeedDelay, InTolerance: m.InTolerance,
 				From: m.From, To: m.To, pathTracks: m.PathTracks,
 				HeadroomMM: m.Headroom, NeedsReroute: m.NeedsReroute(),
@@ -1109,7 +1147,7 @@ func analyse(b *board.Board, proj *board.Project, filename string, p Params, sv 
 		}
 		for _, r := range g.ReferenceMembers {
 			gi.ReferenceMembers = append(gi.ReferenceMembers, ReferenceHalf{
-				Net: r.Net, Label: label(r.Net), LengthMM: r.Length,
+				Net: r.Net, Label: label(r.Net), LengthMM: r.Length, Parts: memberParts(r),
 			})
 		}
 		sort.Slice(gi.Members, func(i, j int) bool {
@@ -1204,7 +1242,7 @@ func candidates(p *ddr.Plan) []MemberInfo {
 				continue
 			}
 			leg := CandidateLeg{
-				Group: g.Name, Leg: g.Leg, LengthMM: m.Length, NeedMM: m.Need,
+				Group: g.Name, Leg: g.Leg, LengthMM: m.Length, Parts: memberParts(m), NeedMM: m.Need,
 				ExcessMM: m.Excess, TargetMM: g.Target,
 				HeadroomMM: m.Headroom, NeedsReroute: m.NeedsReroute(),
 				pathTracks: m.PathTracks,
@@ -1215,6 +1253,7 @@ func candidates(p *ddr.Plan) []MemberInfo {
 				best[m.Net] = &MemberInfo{
 					Net: m.Net, Label: label(m.Net), Role: m.Role.String(), Routed: true,
 					LengthMM: m.Length, DelayPS: m.Delay, DeviationMM: m.Deviation,
+					Parts:  memberParts(m),
 					NeedPS: m.NeedDelay, InTolerance: m.InTolerance,
 					From: m.From, To: m.To, pathTracks: m.PathTracks,
 					ExcessMM: m.Excess,
@@ -1228,6 +1267,7 @@ func candidates(p *ddr.Plan) []MemberInfo {
 				// deviation answer "how bad is this".
 				if m.Need > worst[m.Net] {
 					cur.LengthMM, cur.DelayPS, cur.DeviationMM = m.Length, m.Delay, m.Deviation
+					cur.Parts = memberParts(m)
 					cur.NeedPS = m.NeedDelay
 					cur.From, cur.To, cur.pathTracks = m.From, m.To, m.PathTracks
 				}
@@ -1462,4 +1502,19 @@ func matchedPads(pads []pkglen.PadLength, plan *ddr.Plan) []pkglen.PadLength {
 		}
 	}
 	return out
+}
+
+func memberParts(m ddr.Member) *LengthParts {
+	if !m.Routed {
+		return nil
+	}
+	return lengthParts(m.Parts, m.Vias)
+}
+
+// viaBarrel is the height of a via through the whole board.
+func viaBarrel(b *board.Board) float64 {
+	if b.Stackup == nil || len(b.CopperLayers) < 2 {
+		return 0
+	}
+	return b.Stackup.ViaLength(b.CopperLayers[0], b.CopperLayers[len(b.CopperLayers)-1])
 }

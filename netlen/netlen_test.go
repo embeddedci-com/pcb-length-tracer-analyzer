@@ -521,3 +521,86 @@ func TestArcsAreMeasuredAlongTheCurve(t *testing.T) {
 		t.Fatalf("only %d nets carry tuning arcs", tuned)
 	}
 }
+
+// A route's length is shown to the user taken apart -- track, via barrels, pad
+// entry, package -- so they can see what was counted. The parts must add up to
+// the length exactly, on every route, or the breakdown is a second opinion
+// rather than an explanation.
+func TestPathPartsAddUpToTheLength(t *testing.T) {
+	b := loadBoard(t)
+	barrel := b.Stackup.ViaLength("F.Cu", "B.Cu")
+	e := New(b)
+	noVia := New(b)
+	noVia.CountViaLength = false
+
+	routes, withVias := 0, 0
+	for _, net := range ddrNets(b) {
+		full, bare := e.Measure(net), noVia.Measure(net)
+		for key, p := range full.Paths {
+			if !p.Found {
+				continue
+			}
+			routes++
+			if d := p.Parts.Sum() - p.Length; math.Abs(d) > 1e-9 {
+				t.Fatalf("%s %s: parts %+v sum to %.6f, length is %.6f", net, key, p.Parts, p.Parts.Sum(), p.Length)
+			}
+			if p.Parts.TrackMM <= 0 || p.Parts.PadMM < 0 || p.Parts.PackageMM != 0 {
+				t.Errorf("%s %s: implausible parts %+v", net, key, p.Parts)
+			}
+			// Every via on this board spans F.Cu to B.Cu, so each one crossed
+			// is one whole barrel.
+			if want := float64(p.Vias) * barrel; math.Abs(p.Parts.ViaMM-want) > 1e-9 {
+				t.Errorf("%s %s: %d vias should be %.4f mm of barrel, parts say %.4f", net, key, p.Vias, want, p.Parts.ViaMM)
+			}
+			if p.Vias > 0 {
+				withVias++
+			}
+			// With via height off the barrels count for nothing, and only them.
+			q := bare.Paths[key]
+			if q.Parts.ViaMM != 0 {
+				t.Errorf("%s %s: via height off, still %.4f mm of barrel", net, key, q.Parts.ViaMM)
+			}
+			if d := (p.Length - q.Length) - p.Parts.ViaMM; math.Abs(d) > 1e-9 {
+				t.Errorf("%s %s: turning via height off removed %.4f mm, the barrels were %.4f", net, key, p.Length-q.Length, p.Parts.ViaMM)
+			}
+		}
+	}
+	if routes == 0 || withVias == 0 {
+		t.Fatalf("expected routes with and without vias, got %d routes, %d with vias", routes, withVias)
+	}
+}
+
+// A pad's package length is added once at each end, and only when counted.
+func TestPackageLengthIsItsOwnPart(t *testing.T) {
+	b := loadBoard(t)
+	var net string
+	for _, n := range ddrNets(b) {
+		if m := New(b).Measure(n); m.Complete && len(m.Pads) == 2 {
+			net = n
+			break
+		}
+	}
+	if net == "" {
+		t.Skip("no complete two-pad DDR net")
+	}
+	before := New(b).Measure(net).Longest
+	pads := b.PadsOfNet(net)
+	pads[0].DieLength, pads[1].DieLength = 1.25, 0.5
+	defer func() { pads[0].DieLength, pads[1].DieLength = 0, 0 }()
+
+	e := New(b)
+	after := e.Measure(net).Longest
+	if math.Abs(after.Parts.PackageMM-1.75) > 1e-9 {
+		t.Errorf("package part %.4f, want 1.75", after.Parts.PackageMM)
+	}
+	if math.Abs((after.Length-before.Length)-1.75) > 1e-9 {
+		t.Errorf("length grew %.4f, want 1.75", after.Length-before.Length)
+	}
+	if after.Parts.TrackMM != before.Parts.TrackMM || after.Parts.PadMM != before.Parts.PadMM {
+		t.Errorf("package length moved other parts: %+v -> %+v", before.Parts, after.Parts)
+	}
+	e.CountDieLength = false
+	if off := e.Measure(net).Longest; off.Parts.PackageMM != 0 || math.Abs(off.Length-before.Length) > 1e-9 {
+		t.Errorf("die length off: %+v, length %.4f vs %.4f", off.Parts, off.Length, before.Length)
+	}
+}

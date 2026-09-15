@@ -43,10 +43,12 @@ type NetStatus struct {
 	// but not tuned.
 	Reference bool `json:"reference,omitempty"`
 
-	Routed      bool    `json:"routed"`
-	LengthMM    float64 `json:"length_mm"`
-	TargetMM    float64 `json:"target_mm"`
-	ToleranceMM float64 `json:"tolerance_mm"`
+	Routed   bool    `json:"routed"`
+	LengthMM float64 `json:"length_mm"`
+	// Parts is LengthMM taken apart: track, vias, pad entry, package.
+	Parts       *LengthParts `json:"parts,omitempty"`
+	TargetMM    float64      `json:"target_mm"`
+	ToleranceMM float64      `json:"tolerance_mm"`
 
 	// DeviationMM is signed: negative is short.
 	DeviationMM float64 `json:"deviation_mm"`
@@ -97,7 +99,7 @@ func netRows(a *Analysis) []NetStatus {
 		for _, m := range g.Members {
 			s := NetStatus{
 				Net: m.Net, Label: m.Label, Interface: "DDR", Group: g.Name, Leg: g.Leg,
-				Reference: m.Reference, Routed: m.Routed, LengthMM: m.LengthMM,
+				Reference: m.Reference, Routed: m.Routed, LengthMM: m.LengthMM, Parts: m.Parts,
 				TargetMM: g.TargetMM, ToleranceMM: g.ToleranceMM,
 				DeviationMM: m.DeviationMM, InTolerance: m.InTolerance,
 				NeedMM: m.NeedMM, ExcessMM: m.ExcessMM,

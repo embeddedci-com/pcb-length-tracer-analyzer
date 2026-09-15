@@ -53,6 +53,7 @@ import { NOWRAP, boardWide, buildBrief, expiresIn, mm, packageStatus } from '../
 import { UnitToggle } from '../components/UnitToggle'
 import { RescanButton, SelectNetsButton } from '../components/HostActions'
 import { useHost } from '../lib/host'
+import { HowWeMeasure } from '../components/HowWeMeasure'
 import { candidatesCSV, download, exportName, missingCSV } from '../lib/export'
 import { useUnit } from '../lib/units'
 
@@ -396,6 +397,9 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
                 }
               />
             )}
+            {/* Before any figure: what a length on this page is made of, and
+                what this board counted -- vias, pads, package. */}
+            <HowWeMeasure analysis={analysis} defaultOpen />
             {hasDDR && (
             <div>
               <Title order={4} mb="xs">
@@ -409,6 +413,7 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
               <div style={{ marginBottom: 'var(--mantine-spacing-sm)' }}>
                 <PackageNote status={pkgStatus} />
               </div>
+
               <Stack gap="md">
                 {analysis.groups.map((g) => (
                   <GroupTable

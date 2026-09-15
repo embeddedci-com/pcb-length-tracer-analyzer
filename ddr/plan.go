@@ -42,6 +42,10 @@ type Member struct {
 	// Length and Delay are the measured route.
 	Length, Delay float64
 
+	// Parts is Length taken apart, and Vias how many vias the route crosses.
+	Parts netlen.Parts
+	Vias  int
+
 	// Routed is false when no copper joins the two pads, in which case Length
 	// and Delay mean nothing and the net cannot be tuned.
 	Routed bool
@@ -601,6 +605,7 @@ func buildGroup(iface *Interface, meas map[string]*netlen.Measure, r Rules, kind
 			member.Routed = true
 			member.Length = mm.Longest.Length
 			member.Delay = mm.Longest.Delay
+			member.Parts, member.Vias = mm.Longest.Parts, mm.Longest.Vias
 			member.From, member.To = mm.Longest.From, mm.Longest.To
 			member.PathTracks = mm.Longest.Tracks
 		} else {
@@ -646,6 +651,7 @@ func buildFlyByGroup(iface *Interface, meas map[string]*netlen.Measure, r Rules,
 				member.Routed = true
 				member.Length = p.Length
 				member.Delay = p.Delay
+				member.Parts, member.Vias = p.Parts, p.Vias
 				member.From, member.To = p.From, p.To
 				member.PathTracks = p.Tracks
 				if prev != nil {
