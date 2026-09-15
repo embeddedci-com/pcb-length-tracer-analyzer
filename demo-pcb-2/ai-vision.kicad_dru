@@ -1,0 +1,26 @@
+(version 1)
+
+(rule "bga_fanout_tight"
+  (condition "A.intersectsCourtyard('U3') && A.Type == 'Track'")
+  (constraint clearance (min 0.1mm))
+)
+
+(rule "bga_fanout_tight_ddr"
+  (condition "(A.intersectsCourtyard('U4') || A.intersectsCourtyard('U5')) && !A.intersectsCourtyard('U3') && A.Type == 'Track'")
+  (constraint clearance (min 0.1mm))
+)
+
+(rule "outside_bga_ddr"
+  (condition "!A.intersectsCourtyard('U3') && !A.intersectsCourtyard('U4') && !A.intersectsCourtyard('U5') && A.NetName != '*_P' && A.NetName != '*_N' && A.Type == 'Track'")
+  (constraint clearance (min 0.2mm))
+)
+
+(rule "bga_pads_non_ddr"
+  (condition "A.Type == 'Pad' && (A.memberOfFootprint('U3') || A.memberOfFootprint('U4') || A.memberOfFootprint('U5'))")
+  (constraint clearance (min 0.1mm))
+)
+
+(rule "ddr_fanout_tight_all_copper"
+  (condition "A.insideArea('ddr_fanout_ring') && B.insideArea('ddr_fanout_ring')")
+  (constraint clearance (min 0.1mm))
+)

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "comment": "The shipped surface is src/ alone. dev/ is a harness and is not type-checked as part of the build, so a harness-only slip cannot fail the build that matters.",
+  "include": ["src"]
+}

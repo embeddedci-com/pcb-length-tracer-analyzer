@@ -1,0 +1,573 @@
+{
+ "nets": {
+  "/ddr4/DDR_A0": {
+   "length_mm": 33.5917,
+   "length_no_via_mm": 30.4037,
+   "pads": [
+    "U3.K18",
+    "U5.P3"
+   ]
+  },
+  "/ddr4/DDR_A1": {
+   "length_mm": 23.4747,
+   "length_no_via_mm": 20.2867,
+   "pads": [
+    "U3.P16",
+    "U5.P7"
+   ]
+  },
+  "/ddr4/DDR_A10": {
+   "length_mm": 33.878,
+   "length_no_via_mm": 30.69,
+   "pads": [
+    "U3.J17",
+    "U5.M3"
+   ]
+  },
+  "/ddr4/DDR_A11": {
+   "length_mm": 37.0336,
+   "length_no_via_mm": 33.8456,
+   "pads": [
+    "U3.M18",
+    "U5.T2"
+   ]
+  },
+  "/ddr4/DDR_A12": {
+   "length_mm": 23.5989,
+   "length_no_via_mm": 20.4109,
+   "pads": [
+    "U3.N18",
+    "U5.M7"
+   ]
+  },
+  "/ddr4/DDR_A13": {
+   "length_mm": 21.0517,
+   "length_no_via_mm": 17.8637,
+   "pads": [
+    "U3.R17",
+    "U5.T8"
+   ]
+  },
+  "/ddr4/DDR_A2": {
+   "length_mm": 36.3052,
+   "length_no_via_mm": 33.1172,
+   "pads": [
+    "U3.L18",
+    "U5.R3"
+   ]
+  },
+  "/ddr4/DDR_A3": {
+   "length_mm": 21.8513,
+   "length_no_via_mm": 18.6633,
+   "pads": [
+    "U3.P19",
+    "U5.N7"
+   ]
+  },
+  "/ddr4/DDR_A4": {
+   "length_mm": 33.9096,
+   "length_no_via_mm": 30.7216,
+   "pads": [
+    "U3.H17",
+    "U5.N3"
+   ]
+  },
+  "/ddr4/DDR_A5": {
+   "length_mm": 22.0284,
+   "length_no_via_mm": 18.8404,
+   "pads": [
+    "U3.R19",
+    "U5.P8"
+   ]
+  },
+  "/ddr4/DDR_A6": {
+   "length_mm": 32.4004,
+   "length_no_via_mm": 29.2124,
+   "pads": [
+    "U3.K19",
+    "U5.P2"
+   ]
+  },
+  "/ddr4/DDR_A7": {
+   "length_mm": 21.412,
+   "length_no_via_mm": 18.224,
+   "pads": [
+    "U3.T19",
+    "U5.R8"
+   ]
+  },
+  "/ddr4/DDR_A8": {
+   "length_mm": 34.9152,
+   "length_no_via_mm": 31.7272,
+   "pads": [
+    "U3.L17",
+    "U5.R2"
+   ]
+  },
+  "/ddr4/DDR_A9": {
+   "length_mm": 21.4396,
+   "length_no_via_mm": 18.2516,
+   "pads": [
+    "U3.R18",
+    "U5.R7"
+   ]
+  },
+  "/ddr4/DDR_ACTN": {
+   "length_mm": 33.0561,
+   "length_no_via_mm": 29.8681,
+   "pads": [
+    "U3.H18",
+    "U5.L3"
+   ]
+  },
+  "/ddr4/DDR_BA0": {
+   "length_mm": 31.1598,
+   "length_no_via_mm": 27.9718,
+   "pads": [
+    "U3.J19",
+    "U5.N2"
+   ]
+  },
+  "/ddr4/DDR_BA1": {
+   "length_mm": 23.3688,
+   "length_no_via_mm": 20.1808,
+   "pads": [
+    "U3.P18",
+    "U5.N8"
+   ]
+  },
+  "/ddr4/DDR_BG0": {
+   "length_mm": 31.8339,
+   "length_no_via_mm": 28.6459,
+   "pads": [
+    "U3.H19",
+    "U5.M2"
+   ]
+  },
+  "/ddr4/DDR_CASN": {
+   "length_mm": 24.8821,
+   "length_no_via_mm": 21.6941,
+   "pads": [
+    "U3.P17",
+    "U5.M8"
+   ]
+  },
+  "/ddr4/DDR_CKE": {
+   "length_mm": 36.1747,
+   "length_no_via_mm": 32.9867,
+   "pads": [
+    "U3.M16",
+    "U5.K2"
+   ]
+  },
+  "/ddr4/DDR_CLK_N": {
+   "length_mm": 57.8635,
+   "length_no_via_mm": 53.0815,
+   "pads": [
+    "U3.M19",
+    "U5.K8"
+   ]
+  },
+  "/ddr4/DDR_CLK_P": {
+   "length_mm": 57.0459,
+   "length_no_via_mm": 52.2639,
+   "pads": [
+    "U3.N19",
+    "U5.K7"
+   ]
+  },
+  "/ddr4/DDR_CSN": {
+   "length_mm": 29.2197,
+   "length_no_via_mm": 26.0317,
+   "pads": [
+    "U3.N16",
+    "U5.L7"
+   ]
+  },
+  "/ddr4/DDR_DQ0": {
+   "length_mm": 22.9048,
+   "length_no_via_mm": 22.9048,
+   "pads": [
+    "U3.W22",
+    "U4.F7"
+   ]
+  },
+  "/ddr4/DDR_DQ1": {
+   "length_mm": 23.0355,
+   "length_no_via_mm": 23.0355,
+   "pads": [
+    "U3.Y21",
+    "U4.H7"
+   ]
+  },
+  "/ddr4/DDR_DQ10": {
+   "length_mm": 38.5585,
+   "length_no_via_mm": 38.5585,
+   "pads": [
+    "U3.L21",
+    "U4.C7"
+   ]
+  },
+  "/ddr4/DDR_DQ11": {
+   "length_mm": 38.572,
+   "length_no_via_mm": 38.572,
+   "pads": [
+    "U3.L22",
+    "U4.C8"
+   ]
+  },
+  "/ddr4/DDR_DQ12": {
+   "length_mm": 38.4146,
+   "length_no_via_mm": 38.4146,
+   "pads": [
+    "U3.T22",
+    "U4.D3"
+   ]
+  },
+  "/ddr4/DDR_DQ13": {
+   "length_mm": 38.265,
+   "length_no_via_mm": 38.265,
+   "pads": [
+    "U3.R20",
+    "U4.C3"
+   ]
+  },
+  "/ddr4/DDR_DQ14": {
+   "length_mm": 38.2101,
+   "length_no_via_mm": 38.2101,
+   "pads": [
+    "U3.R21",
+    "U4.C2"
+   ]
+  },
+  "/ddr4/DDR_DQ15": {
+   "length_mm": 38.1998,
+   "length_no_via_mm": 38.1998,
+   "pads": [
+    "U3.R22",
+    "U4.A3"
+   ]
+  },
+  "/ddr4/DDR_DQ16": {
+   "length_mm": 53.7228,
+   "length_no_via_mm": 53.7228,
+   "pads": [
+    "U3.D20",
+    "U5.D7"
+   ]
+  },
+  "/ddr4/DDR_DQ17": {
+   "length_mm": 53.9202,
+   "length_no_via_mm": 53.9202,
+   "pads": [
+    "U3.C22",
+    "U5.C7"
+   ]
+  },
+  "/ddr4/DDR_DQ18": {
+   "length_mm": 53.8203,
+   "length_no_via_mm": 53.8203,
+   "pads": [
+    "U3.C21",
+    "U5.B8"
+   ]
+  },
+  "/ddr4/DDR_DQ19": {
+   "length_mm": 54.2137,
+   "length_no_via_mm": 54.2137,
+   "pads": [
+    "U3.B22",
+    "U5.C8"
+   ]
+  },
+  "/ddr4/DDR_DQ2": {
+   "length_mm": 22.9313,
+   "length_no_via_mm": 22.9313,
+   "pads": [
+    "U3.Y22",
+    "U4.J7"
+   ]
+  },
+  "/ddr4/DDR_DQ20": {
+   "length_mm": 53.8902,
+   "length_no_via_mm": 53.8902,
+   "pads": [
+    "U3.F20",
+    "U5.D3"
+   ]
+  },
+  "/ddr4/DDR_DQ21": {
+   "length_mm": 53.8061,
+   "length_no_via_mm": 53.8061,
+   "pads": [
+    "U3.F19",
+    "U5.C3"
+   ]
+  },
+  "/ddr4/DDR_DQ22": {
+   "length_mm": 53.8458,
+   "length_no_via_mm": 53.8458,
+   "pads": [
+    "U3.E19",
+    "U5.C2"
+   ]
+  },
+  "/ddr4/DDR_DQ23": {
+   "length_mm": 53.9877,
+   "length_no_via_mm": 53.9877,
+   "pads": [
+    "U3.E20",
+    "U5.A3"
+   ]
+  },
+  "/ddr4/DDR_DQ24": {
+   "length_mm": 33.8681,
+   "length_no_via_mm": 33.8681,
+   "pads": [
+    "U3.G19",
+    "U5.J3"
+   ]
+  },
+  "/ddr4/DDR_DQ25": {
+   "length_mm": 41.4763,
+   "length_no_via_mm": 41.4763,
+   "pads": [
+    "U3.G22",
+    "U5.H2"
+   ]
+  },
+  "/ddr4/DDR_DQ26": {
+   "length_mm": 37.1463,
+   "length_no_via_mm": 37.1463,
+   "pads": [
+    "U3.G21",
+    "U5.H3"
+   ]
+  },
+  "/ddr4/DDR_DQ27": {
+   "length_mm": 40.1739,
+   "length_no_via_mm": 40.1739,
+   "pads": [
+    "U3.G20",
+    "U5.G2"
+   ]
+  },
+  "/ddr4/DDR_DQ28": {
+   "length_mm": 37.4806,
+   "length_no_via_mm": 37.4806,
+   "pads": [
+    "U3.J21",
+    "U5.J7"
+   ]
+  },
+  "/ddr4/DDR_DQ29": {
+   "length_mm": 37.9397,
+   "length_no_via_mm": 37.9397,
+   "pads": [
+    "U3.J20",
+    "U5.H8"
+   ]
+  },
+  "/ddr4/DDR_DQ3": {
+   "length_mm": 23.1107,
+   "length_no_via_mm": 23.1107,
+   "pads": [
+    "U3.AA22",
+    "U4.H8"
+   ]
+  },
+  "/ddr4/DDR_DQ30": {
+   "length_mm": 39.2194,
+   "length_no_via_mm": 39.2194,
+   "pads": [
+    "U3.K20",
+    "U5.H7"
+   ]
+  },
+  "/ddr4/DDR_DQ31": {
+   "length_mm": 40.8429,
+   "length_no_via_mm": 40.8429,
+   "pads": [
+    "U3.L19",
+    "U5.F7"
+   ]
+  },
+  "/ddr4/DDR_DQ4": {
+   "length_mm": 22.8406,
+   "length_no_via_mm": 22.8406,
+   "pads": [
+    "U3.T21",
+    "U4.J3"
+   ]
+  },
+  "/ddr4/DDR_DQ5": {
+   "length_mm": 22.9507,
+   "length_no_via_mm": 22.9507,
+   "pads": [
+    "U3.T20",
+    "U4.H2"
+   ]
+  },
+  "/ddr4/DDR_DQ6": {
+   "length_mm": 22.8545,
+   "length_no_via_mm": 22.8545,
+   "pads": [
+    "U3.U21",
+    "U4.H3"
+   ]
+  },
+  "/ddr4/DDR_DQ7": {
+   "length_mm": 22.7726,
+   "length_no_via_mm": 22.7726,
+   "pads": [
+    "U3.U20",
+    "U4.G2"
+   ]
+  },
+  "/ddr4/DDR_DQ8": {
+   "length_mm": 38.3352,
+   "length_no_via_mm": 38.3352,
+   "pads": [
+    "U3.M21",
+    "U4.B8"
+   ]
+  },
+  "/ddr4/DDR_DQ9": {
+   "length_mm": 38.6009,
+   "length_no_via_mm": 38.6009,
+   "pads": [
+    "U3.M22",
+    "U4.D7"
+   ]
+  },
+  "/ddr4/DDR_DQM0": {
+   "length_mm": 22.9099,
+   "length_no_via_mm": 22.9099,
+   "pads": [
+    "U3.W21",
+    "U4.E7"
+   ]
+  },
+  "/ddr4/DDR_DQM1": {
+   "length_mm": 38.1065,
+   "length_no_via_mm": 38.1065,
+   "pads": [
+    "U3.P20",
+    "U4.E2"
+   ]
+  },
+  "/ddr4/DDR_DQM2": {
+   "length_mm": 53.8927,
+   "length_no_via_mm": 53.8927,
+   "pads": [
+    "U3.E21",
+    "U5.E2"
+   ]
+  },
+  "/ddr4/DDR_DQM3": {
+   "length_mm": 39.9637,
+   "length_no_via_mm": 39.9637,
+   "pads": [
+    "U3.H20",
+    "U5.E7"
+   ]
+  },
+  "/ddr4/DDR_DQS0_N": {
+   "length_mm": 23.2074,
+   "length_no_via_mm": 23.2074,
+   "pads": [
+    "U3.W20",
+    "U4.F3"
+   ]
+  },
+  "/ddr4/DDR_DQS0_P": {
+   "length_mm": 22.8065,
+   "length_no_via_mm": 22.8065,
+   "pads": [
+    "U3.V20",
+    "U4.G3"
+   ]
+  },
+  "/ddr4/DDR_DQS1_N": {
+   "length_mm": 38.2895,
+   "length_no_via_mm": 38.2895,
+   "pads": [
+    "U3.N21",
+    "U4.A7"
+   ]
+  },
+  "/ddr4/DDR_DQS1_P": {
+   "length_mm": 38.287,
+   "length_no_via_mm": 38.287,
+   "pads": [
+    "U3.N20",
+    "U4.B7"
+   ]
+  },
+  "/ddr4/DDR_DQS2_N": {
+   "length_mm": 53.6333,
+   "length_no_via_mm": 53.6333,
+   "pads": [
+    "U3.D22",
+    "U5.A7"
+   ]
+  },
+  "/ddr4/DDR_DQS2_P": {
+   "length_mm": 54.12,
+   "length_no_via_mm": 54.12,
+   "pads": [
+    "U3.D21",
+    "U5.B7"
+   ]
+  },
+  "/ddr4/DDR_DQS3_N": {
+   "length_mm": 41.1143,
+   "length_no_via_mm": 41.1143,
+   "pads": [
+    "U3.H21",
+    "U5.F3"
+   ]
+  },
+  "/ddr4/DDR_DQS3_P": {
+   "length_mm": 39.8251,
+   "length_no_via_mm": 39.8251,
+   "pads": [
+    "U3.H22",
+    "U5.G3"
+   ]
+  },
+  "/ddr4/DDR_ODT": {
+   "length_mm": 37.3456,
+   "length_no_via_mm": 34.1576,
+   "pads": [
+    "U3.M17",
+    "U5.K3"
+   ]
+  },
+  "/ddr4/DDR_RASN": {
+   "length_mm": 25.7806,
+   "length_no_via_mm": 22.5926,
+   "pads": [
+    "U3.N17",
+    "U5.L8"
+   ]
+  },
+  "/ddr4/DDR_RESETN": {
+   "length_mm": 40.2978,
+   "length_no_via_mm": 37.1098,
+   "pads": [
+    "U3.F18",
+    "U5.P1"
+   ]
+  },
+  "/ddr4/DDR_WEN": {
+   "length_mm": 32.2387,
+   "length_no_via_mm": 29.0507,
+   "pads": [
+    "U3.G18",
+    "U5.L2"
+   ]
+  }
+ },
+ "source": "kicad-cli pcb drc length constraint"
+}

@@ -1,0 +1,40 @@
+{
+  "name": "pcb-trace-length-analyzer-webapp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "PCB trace length analyzer frontend. src/ is a drop-in folder for embeddedci-server/webapp/src/pcb-trace-length-analyzer/; dev/ is a standalone harness that talks to cmd/pcb-trace-length-analyzer-server.",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit -p tsconfig.build.json && vite build",
+    "dev": "vite --config vite.config.ts",
+    "build:kicad": "tsc --noEmit -p tsconfig.build.json && vite build --config vite.kicad.config.ts"
+  },
+  "devDependencies": {
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
+    "@tanstack/react-query": "^5.102.8",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "jsdom": "^30.0.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.3.1",
+    "typescript": "^5.2.2",
+    "vite": "^8.1.0",
+    "vitest": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
+    "@tanstack/react-query": "^5.91.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router": "^8.3.0"
+  }
+}

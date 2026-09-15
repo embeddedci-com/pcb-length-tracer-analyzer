@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "types": ["vitest/globals"],
+    "paths": { "@emi/*": ["../../emi-analyzer/webapp/src/*"] }
+  },
+  "comment": [
+    "The @emi paths pull the board viewer in from the sibling repository, the same way embeddedci-server does -- and this folder ships inside that app, so its compiler options are the ones that decide whether the code builds.",
+    "That is why noUncheckedIndexedAccess is not set here. TypeScript has no per-file options, so leaving it on would check the analyzer's source against a rule its own project does not use and fail on code that is correct where it lives. Checking our source under stricter settings than the build that ships it is checking a different program."
+  ],
+  "include": ["src", "dev", "kicad"]
+}

@@ -1,0 +1,6 @@
+# Installed by KiCad into the plugin's own virtual environment.
+kicad-python>=0.7.0
+# The window and the web view the report runs in. PySide6-Addons carries
+# QtWebEngine; it is a large download (a few hundred MB) the first time.
+PySide6-Essentials>=6.7
+PySide6-Addons>=6.7

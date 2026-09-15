@@ -1,0 +1,32 @@
+{
+  "$schema": "https://go.kicad.org/api/schemas/v1",
+  "identifier": "com.embeddedci.pcb-trace-length-analyzer",
+  "name": "PCB Trace Length Analyzer",
+  "description": "Length matching for DDR, Ethernet, USB, PCIe, MIPI and SD on the board open in the PCB Editor: what each net needs, selecting what is out of tolerance, and applying meanders as one undoable edit. Runs locally; nothing is uploaded.",
+  "runtime": {
+    "type": "python",
+    "min_version": "3.9"
+  },
+  "actions": [
+    {
+      "identifier": "analyze",
+      "name": "Trace Length Analyzer",
+      "description": "Analyse trace lengths on this board",
+      "show-button": true,
+      "scopes": ["pcb"],
+      "entrypoint": "analyze.py",
+      "icons-light": ["icons/analyzer-24.png", "icons/analyzer-48.png"],
+      "icons-dark": ["icons/analyzer-24-dark.png", "icons/analyzer-48-dark.png"]
+    },
+    {
+      "identifier": "net-length",
+      "name": "Selected Net Length",
+      "description": "How far the selected net is from its length target",
+      "show-button": true,
+      "scopes": ["pcb"],
+      "entrypoint": "net_length.py",
+      "icons-light": ["icons/net-length-24.png", "icons/net-length-48.png"],
+      "icons-dark": ["icons/net-length-24-dark.png", "icons/net-length-48-dark.png"]
+    }
+  ]
+}

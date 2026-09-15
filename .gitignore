@@ -1,0 +1,38 @@
+# Build output
+/bin/
+/out/
+*.test
+coverage.out
+
+# The demo boards are test fixtures, so only what the tests read is kept: the
+# board itself, the project file (net classes), the custom rules, and the
+# schematics the parser is exercised against. Everything KiCad generates or
+# vendors is left out -- for each board that is 203 MB against 5 MB of actual
+# design. demo-pcb-2 is the same board further through routing, and is kept
+# under the same rules.
+
+# 101 MB of vendored LCSC symbols, footprints and 3D models
+demo-pcb*/libs/
+# 100 MB of pcbnew autosave archives
+demo-pcb*/ai-vision-backups/
+# generated gerbers, drill files and netlist
+demo-pcb*/out/
+# pcbnew's in-progress copy of the board
+demo-pcb*/_autosave-*
+# editor lock files, present only while KiCad has the project open
+demo-pcb*/~*.lck
+# per-user editor state: which layers are visible, where the view was
+demo-pcb*/*.kicad_prl
+
+# The KiCad plugin's generated half: the engine binary and the built report
+kicad-plugin/bin/
+kicad-plugin/web/
+kicad-plugin/**/__pycache__/
+kicad-plugin/.pytest_cache/
+/dist/
+
+# Webapp build output and installed packages
+webapp/node_modules/
+webapp/dist/
+
+.DS_Store
