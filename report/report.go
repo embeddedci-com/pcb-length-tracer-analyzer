@@ -283,7 +283,7 @@ func Interfaces(w io.Writer, found []*proto.Interface, m proto.Measurer) {
 			mark, i.Name, i.Kind, i.Total, i.Routed, a.Summary)
 	}
 	tw.Flush()
-	fmt.Fprintln(w, "  Recognised from the net names, so each one is a reading rather than a proof:")
+	fmt.Fprintln(w, "  Recognized from the net names, so each one is a reading rather than a proof:")
 	for _, i := range found {
 		fmt.Fprintf(w, "    %-28s %s\n", i.Name, i.Evidence)
 	}

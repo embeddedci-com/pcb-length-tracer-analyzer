@@ -75,7 +75,7 @@ class AnalyzerWindow(QMainWindow):
         self._profile = QWebEngineProfile(self)
         self._handler = SchemeHandler(
             web_root,
-            engine_request=self.ctl.engine.request_async,
+            engine_request=self._engine_request,
             kicad_routes=self._routes(),
             parent=self,
         )
@@ -92,6 +92,25 @@ class AnalyzerWindow(QMainWindow):
         self._poll.setInterval(self.SELECTION_POLL_MS)
         self._poll.timeout.connect(self._poll_selection)
         self._polling = False
+
+    def _engine_request(self, method, path, body, headers):
+        """Forward a request to the engine, and keep the rules when the page changes them."""
+        import json
+        import re
+
+        fut = self.ctl.engine.request_async(method, path, body, headers)
+        if method == "POST" and re.search(r"/sessions/[^/]+/(plan|apply)$", path.split("?")[0]):
+
+            def keep(f):
+                try:
+                    res = f.result()
+                    if res.status == 200:
+                        self.ctl.remember_response(json.loads(res.body))
+                except Exception:  # noqa: BLE001 -- the page still gets its answer
+                    pass
+
+            fut.add_done_callback(keep)
+        return fut
 
     def _routes(self):
         routes = {
@@ -194,7 +213,9 @@ class AnalyzerWindow(QMainWindow):
             self.view.setUrl(QUrl(f"{ORIGIN}/index.html"))
             return
         self.statusBar().showMessage(f"Read {self.ctl.filename} from {self.ctl.source}", 8000)
-        self.view.setUrl(QUrl(f"{ORIGIN}/index.html?session={sid}"))
+        from . import __version__
+
+        self.view.setUrl(QUrl(f"{ORIGIN}/index.html?session={sid}&v={__version__}"))
         self._last_selection = []
 
     def select_attention(self) -> None:

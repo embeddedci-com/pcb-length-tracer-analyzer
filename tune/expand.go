@@ -378,7 +378,7 @@ func groupUnits(b *Bundle, coupled map[string]string) ([]*unit, string) {
 				i++
 				continue
 			}
-			return nil, fmt.Sprintf("%s and %s are a pair but are not neighbours here, so the bus cannot be spread safely",
+			return nil, fmt.Sprintf("%s and %s are a pair but are not neighbors here, so the bus cannot be spread safely",
 				shortName(m.Net), shortName(pair))
 		}
 		out = append(out, &unit{

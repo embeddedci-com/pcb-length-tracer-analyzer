@@ -204,7 +204,7 @@ After applying, verify with KiCad's own design rule check:
 	fs.Var(&o.groupTol, "group-tol",
 		"hold one group to its own tolerance, as \"byte lane 0=0.2\" in mm; repeatable")
 	fs.Var(&o.areas, "area",
-		"only add copper inside this region, as x0,y0,x1,y1 in board millimetres; repeatable")
+		"only add copper inside this region, as x0,y0,x1,y1 in board millimeters; repeatable")
 	fs.StringVar(&o.onlyIface, "interface", "",
 		"report one interface in detail, by name or kind, e.g. \"pcie\" or \"Ethernet RGMII (ETH1)\"")
 
@@ -262,7 +262,7 @@ func analyse(path string, o options, w *os.File, in *os.File) error {
 	if o.prefix == "" && prefix != "" {
 		fmt.Fprintf(w, "Using net prefix %q (override with -prefix)\n", prefix)
 	} else if scoped != nil {
-		fmt.Fprintf(w, "Using the %d nets recognised as DDR (override with -prefix)\n", len(scoped))
+		fmt.Fprintf(w, "Using the %d nets recognized as DDR (override with -prefix)\n", len(scoped))
 	}
 
 	iface, err := ddr.Classify(b, ddr.Options{NetPrefix: prefix, Nets: scoped, Controller: o.controller})
@@ -372,7 +372,7 @@ func analyse(path string, o options, w *os.File, in *os.File) error {
 			return err
 		}
 		if !ok {
-			fmt.Fprintln(w, "Cancelled. Nothing was written.")
+			fmt.Fprintln(w, "Canceled. Nothing was written.")
 			return nil
 		}
 	}
@@ -710,7 +710,7 @@ func (g *groupTolList) Set(v string) error {
 	name := strings.TrimSpace(v[:i])
 	mm, err := strconv.ParseFloat(strings.TrimSpace(v[i+1:]), 64)
 	if err != nil || mm <= 0 {
-		return fmt.Errorf("the tolerance in %q is not a positive number of millimetres", v)
+		return fmt.Errorf("the tolerance in %q is not a positive number of millimeters", v)
 	}
 	if g.m == nil {
 		g.m = map[string]float64{}
@@ -739,13 +739,13 @@ func (a *areaList) Set(v string) error {
 	// did not ask for.
 	parts := strings.Split(strings.TrimSpace(v), ",")
 	if len(parts) != 4 {
-		return fmt.Errorf("expected x0,y0,x1,y1 in millimetres, got %q", v)
+		return fmt.Errorf("expected x0,y0,x1,y1 in millimeters, got %q", v)
 	}
 	var n [4]float64
 	for i, p := range parts {
 		f, err := strconv.ParseFloat(strings.TrimSpace(p), 64)
 		if err != nil {
-			return fmt.Errorf("expected x0,y0,x1,y1 in millimetres, got %q", v)
+			return fmt.Errorf("expected x0,y0,x1,y1 in millimeters, got %q", v)
 		}
 		n[i] = f
 	}

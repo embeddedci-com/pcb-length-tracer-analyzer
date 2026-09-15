@@ -69,7 +69,7 @@ export function AreaVerdict({ analysis, headroom, loading, areaCount }: AreaVerd
         {mm(have)} of the {mm(need)} needed is reachable{areaCount > 0 ? ' inside the areas' : ''}:{' '}
         {fits} of {candidates.length} nets have all the room they need.
         {reachable > 1e-6
-          ? ` Of the ${mm(short)} still missing, ${mm(reachable)} is on nets that are merely short of room — a bigger area may reach it.`
+          ? ` Of the ${mm(short)} still missing, ${mm(reachable)} is on nets that are merely short of room. A bigger area may reach it.`
           : ''}
         {unreachable > 1e-6
           ? ` ${mm(unreachable)} is on ${reroute} net${

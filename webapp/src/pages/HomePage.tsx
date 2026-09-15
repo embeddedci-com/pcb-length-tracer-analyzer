@@ -59,7 +59,7 @@ export function HomePage({ api }: { api: AnalyzerApi }) {
           sessionTTLSeconds={defaults.data?.session_ttl_seconds}
         />
         <div style={{ marginTop: 'var(--mantine-spacing-md)' }}>
-          <HowWeMeasure defaultOpen />
+          <HowWeMeasure />
         </div>
       </div>
 

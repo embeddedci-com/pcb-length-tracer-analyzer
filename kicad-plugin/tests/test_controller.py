@@ -4,10 +4,11 @@ import pytest
 
 from trace_length_analyzer import boardio
 from trace_length_analyzer.controller import Controller, format_lookup, format_row
+from trace_length_analyzer.rules_store import RulesStore, shared_identifier
 
 
 @pytest.fixture
-def controller(engine, demo_files, monkeypatch):
+def controller(engine, demo_files, monkeypatch, tmp_path):
     files = boardio.BoardFiles(
         text=demo_files["text"],
         filename=demo_files["filename"],
@@ -17,7 +18,7 @@ def controller(engine, demo_files, monkeypatch):
         source="the editor",
     )
     monkeypatch.setattr(boardio, "read_board", lambda board: files)
-    return Controller(engine, kicad=object(), board=object())
+    return Controller(engine, kicad=object(), board=object(), store=RulesStore(tmp_path / "settings"))
 
 
 def test_rescan_carries_the_users_parameters_to_the_new_session(controller):
@@ -91,3 +92,44 @@ def test_apply_is_switched_off(controller):
     controller.rescan()
     with pytest.raises(ctlmod.ApplyDisabled):
         controller.apply(controller.session)
+
+
+def test_rules_survive_closing_the_plugin(controller, engine_path, tmp_path):
+    """A new plugin process -- a new engine, a new controller -- reads the board with the rules it was left with."""
+    from trace_length_analyzer.engine import Engine
+
+    controller.rescan()
+    params = controller.current_params()
+    params["clock_offset_percent"] = 4.0
+    params["group_tolerance_mm"] = {controller.group_names()[0]: 0.2}
+    controller.remember_response(controller.engine.plan(controller.session, params))
+
+    with Engine(engine_path) as fresh:
+        again = Controller(fresh, kicad=object(), board=object(), store=RulesStore(tmp_path / "settings"))
+        again.rescan()
+        kept = again.current_params()
+    assert kept["clock_offset_percent"] == 4.0
+    assert kept["group_tolerance_mm"] == params["group_tolerance_mm"]
+
+
+def test_one_tolerance_everywhere_is_remembered(controller, tmp_path):
+    controller.rescan()
+    controller.set_tolerance_everywhere(7.5)
+    saved = RulesStore(tmp_path / "settings").load(controller.board_key)
+    assert saved and set(saved["group_tolerance_mm"].values()) == {7.5}
+
+
+def test_rules_are_kept_per_board(tmp_path):
+    store = RulesStore(tmp_path)
+    store.save("/a/board.kicad_pcb", {"clock_offset_percent": 1})
+    store.save("/b/board.kicad_pcb", {"clock_offset_percent": 2})
+    assert store.load("/a/board.kicad_pcb") == {"clock_offset_percent": 1}
+    assert store.load("/b/board.kicad_pcb") == {"clock_offset_percent": 2}
+    assert store.load("/c/board.kicad_pcb") is None
+    (tmp_path / "boards" / next(p.name for p in (tmp_path / "boards").iterdir())).write_text("{not json")
+    assert store.load("/a/board.kicad_pcb") is None or store.load("/b/board.kicad_pcb") is None
+
+
+def test_dev_and_release_share_the_rules():
+    assert shared_identifier("com.embeddedci.pcb-trace-length-analyzer.dev") == "com.embeddedci.pcb-trace-length-analyzer"
+    assert shared_identifier("com.embeddedci.pcb-trace-length-analyzer") == "com.embeddedci.pcb-trace-length-analyzer"

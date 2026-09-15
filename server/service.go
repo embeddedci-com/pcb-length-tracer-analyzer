@@ -103,7 +103,7 @@ func (s *Service) fail(w http.ResponseWriter, r *http.Request, code int, err err
 func (s *Service) user(w http.ResponseWriter, r *http.Request) (UserIdentity, bool) {
 	u, ok := UserFrom(r.Context())
 	if !ok || u.UserID == "" {
-		s.fail(w, r, http.StatusUnauthorized, errors.New("sign in to analyse a board"))
+		s.fail(w, r, http.StatusUnauthorized, errors.New("sign in to analyze a board"))
 		return UserIdentity{}, false
 	}
 	return u, true

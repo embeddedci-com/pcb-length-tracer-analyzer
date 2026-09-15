@@ -27,17 +27,20 @@ HEARTBEAT_S = 1.0
 STALE_S = 6.0
 
 
-def _default_dir() -> Path:
+def _default_dir(name: str) -> Path:
     try:
         user = getpass.getuser()
     except Exception:  # noqa: BLE001
         user = "user"
-    return Path(tempfile.gettempdir()) / f"pcb-trace-length-analyzer-{user}"
+    safe = "".join(c if c.isalnum() or c in "-._" else "_" for c in name)
+    return Path(tempfile.gettempdir()) / f"{safe}-{user}"
 
 
 class SingleInstance:
-    def __init__(self, directory: Optional[Path] = None):
-        self.dir = Path(directory) if directory else _default_dir()
+    def __init__(self, directory: Optional[Path] = None, name: str = "pcb-trace-length-analyzer"):
+        # One lock per installed plugin: a development copy and the released
+        # one each keep their own window.
+        self.dir = Path(directory) if directory else _default_dir(name)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.lock = self.dir / "window.lock"
         self.request = self.dir / "show.request"

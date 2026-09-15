@@ -391,7 +391,7 @@ export function Readiness({
                   {measuring && <Loader size="xs" />}
                   <Text size="sm" c="dimmed">
                     {measuring
-                      ? `Measuring how much room there is beside every route — ${roughly(
+                      ? `Measuring how much room there is beside every route: ${roughly(
                           analysis.board.tracks,
                         )} on a board this size.`
                       : 'Not measured yet.'}
@@ -463,7 +463,7 @@ export function Readiness({
                           {fits.length}
                         </Badge>
                         <Text size="sm">
-                          can be matched as they are &mdash; {mm(sum(fits))}
+                          can be matched as they are: {mm(sum(fits))}
                         </Text>
                       </Group>
                     </Accordion.Control>
@@ -481,7 +481,7 @@ export function Readiness({
                         <Badge color="orange" variant="light">
                           {tight.length}
                         </Badge>
-                        <Text size="sm">need more room &mdash; {mm(sum(tight))}</Text>
+                        <Text size="sm">need more room: {mm(sum(tight))}</Text>
                       </Group>
                     </Accordion.Control>
                     <Accordion.Panel>
@@ -500,7 +500,7 @@ export function Readiness({
                           {reroute.length}
                         </Badge>
                         <Text size="sm">
-                          need rerouting, not tuning &mdash; {mm(sum(reroute))}
+                          need rerouting, not tuning: {mm(sum(reroute))}
                         </Text>
                       </Group>
                     </Accordion.Control>

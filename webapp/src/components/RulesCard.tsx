@@ -82,7 +82,7 @@ export function RulesCard({ rules }: { rules?: DesignRules }) {
         <Accordion.Item value="board">
           <Accordion.Control>
             <Text size="sm">
-              The board&rsquo;s own setup &mdash; minimum clearance {mm(rules.min_clearance_mm)},
+              The board&rsquo;s own setup: minimum clearance {mm(rules.min_clearance_mm)},
               minimum track {mm(rules.min_track_width_mm)}
             </Text>
           </Accordion.Control>
@@ -145,7 +145,7 @@ export function RulesCard({ rules }: { rules?: DesignRules }) {
             <Accordion.Panel>
               <Text size="xs" c="dimmed" mb="xs">
                 A rule this understands is applied where it tightens a clearance and ignored
-                where it would loosen one &mdash; a meander has no business being crammed into a
+                where it would loosen one. A meander has no business being crammed into a
                 BGA fanout because a rule there allows it, though the router does use them, since
                 a ball that cannot be escaped at the net class clearance can be escaped at the
                 one the board actually sets. A rule left alone is replaced by the net classes at

@@ -13,16 +13,25 @@ from pathlib import Path
 
 PLUGIN_DIR = Path(__file__).resolve().parent.parent
 
-# KiCad's ` key highlights a net without selecting anything, and the API can
-# only see the selection -- it has no call for the highlighted net. So a net
-# picked out with ` looks like nothing at all from here.
-NOTHING_SELECTED = (
-    "Nothing is selected in the PCB Editor.\n\n"
-    "The ` key highlights a net but does not select it, and KiCad does not let "
-    "plugins see which net is highlighted.\n\n"
-    "Click a track, via or pad instead. To select the whole trace, click a track "
-    "and press U (Select/Expand Connection); then run this again."
-)
+
+def plugin_identifier() -> str:
+    """The identifier of the installed copy running this code.
+
+    A development install links this source into KiCad under a plugin.json of
+    its own, with its own identifier; that file sits beside the entry point
+    KiCad ran, not beside this source. KICAD_PLUGIN_DIR is not something KiCad
+    promises to set, so the entry point's own directory is asked first.
+    """
+    import json
+
+    for d in (Path(sys.argv[0]).absolute().parent, PLUGIN_DIR):
+        try:
+            return json.loads((d / "plugin.json").read_text())["identifier"]
+        except (OSError, ValueError, KeyError):
+            continue
+    return "pcb-trace-length-analyzer"
+
+
 WEB_ROOT = PLUGIN_DIR / "web"
 ICON = PLUGIN_DIR / "icons" / "analyzer-48.png"
 
@@ -60,7 +69,7 @@ def analyze(argv=None) -> int:
     argv = list(sys.argv if argv is None else argv)
     from .single import HEARTBEAT_S, SingleInstance
 
-    instance = SingleInstance()
+    instance = SingleInstance(name=plugin_identifier())
     if not instance.acquire():
         if instance.ask_to_show():
             return 0
@@ -91,7 +100,7 @@ def _analyze(argv, instance, heartbeat_s: float) -> int:
     except Exception as e:  # noqa: BLE001
         return _fatal("The analyzer engine could not start", e)
 
-    ctl = Controller(engine)
+    ctl = Controller(engine, identifier=plugin_identifier())
     win = AnalyzerWindow(ctl, WEB_ROOT, ICON)
     win.show()
     win.raise_()
@@ -118,32 +127,47 @@ def _analyze(argv, instance, heartbeat_s: float) -> int:
 
 
 def net_length(argv=None) -> int:
-    """Say how far each selected net is from its target, with no report at all."""
+    """How far the selected net is from its target, in a panel that leaves KiCad focused.
+
+    With nothing selected the panel waits for a click in the PCB Editor.
+    """
     argv = list(sys.argv if argv is None else argv)
-    _app(argv)
-    from PySide6.QtWidgets import QMessageBox
+    app = _app(argv)
+    from concurrent.futures import ThreadPoolExecutor
 
     from . import boardio
-    from .controller import Controller, format_lookup
+    from .controller import Controller
     from .engine import Engine
+    from .macos import make_accessory
+    from .netpanel import NetPanel
+
+    # Show without activating Python: KiCad keeps focus, and an open report
+    # window is not brought forward.
+    make_accessory()
 
     try:
-        kicad, board = boardio.connect()
-        nets = boardio.selected_nets(board)
-        if not nets:
-            QMessageBox.information(
-                None,
-                "Trace length",
-                NOTHING_SELECTED,
-            )
-            return 0
-        with Engine() as engine:
-            ctl = Controller(engine, kicad, board)
-            ctl.rescan()
-            lines = format_lookup(ctl.lookup(nets))
+        engine = Engine()
     except Exception as e:  # noqa: BLE001
-        return _fatal("Could not measure the selected net", e)
+        return _fatal("The analyzer engine could not start", e)
+    # The same rules the report was last left with, for this board.
+    ctl = Controller(engine, identifier=plugin_identifier())
+    # KiCad calls from one thread only, as the report window does.
+    worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kicad")
 
-    box = QMessageBox(QMessageBox.Icon.Information, "Trace length", "\n\n".join(lines))
-    box.exec()
-    return 0
+    def run(fn, callback):
+        fut = worker.submit(fn)
+        fut.add_done_callback(lambda f: callback(*((f.result(), None) if not f.exception() else (None, f.exception()))))
+
+    panel = NetPanel(
+        read_board=ctl.rescan,
+        selected=ctl.selected_nets,
+        lookup=ctl.lookup,
+        run=run,
+        icon=PLUGIN_DIR / "icons" / "net-length-48.png",
+    )
+    panel.destroyed.connect(app.quit)
+    panel.start()
+    code = app.exec()
+    worker.shutdown(wait=False, cancel_futures=True)
+    engine.close()
+    return code

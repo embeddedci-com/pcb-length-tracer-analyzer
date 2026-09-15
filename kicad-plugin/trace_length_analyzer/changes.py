@@ -81,6 +81,6 @@ def summarize_problems(problems: List[str], limit: int = 5) -> str:
     more = f"; and {len(problems) - limit} more" if len(problems) > limit else ""
     n = len(problems)
     return (
-        f"The board has changed since it was analysed, so nothing was applied: {head}{more}. "
-        f"Rescan to analyse the board as it is now ({n} item{'s' if n != 1 else ''} differ)."
+        f"The board has changed since it was analyzed, so nothing was applied: {head}{more}. "
+        f"Rescan to analyze the board as it is now ({n} item{'s' if n != 1 else ''} differ)."
     )

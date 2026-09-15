@@ -11,9 +11,9 @@
  * session, and there is no address bar to keep in step.
  */
 
-import { StrictMode, useState } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Alert, AppShell, Button, Container, MantineProvider, Stack, Text } from '@mantine/core'
+import { Alert, Anchor, AppShell, Button, Container, MantineProvider, Stack, Text } from '@mantine/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import '@mantine/core/styles.css'
@@ -27,8 +27,32 @@ const qc = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
 })
 
-const session = new URLSearchParams(window.location.search).get('session') ?? ''
+const query = new URLSearchParams(window.location.search)
+const session = query.get('session') ?? ''
+// The plugin's version, passed by the window, for the footer.
+const version = query.get('v') ?? ''
 const BASE = '/tools/pcb-trace-length-analyzer'
+
+/**
+ * Which build this is: the plugin's version, and the engine's build when it
+ * says something the version does not (a development build names its commit).
+ */
+function Version() {
+  const [engine, setEngine] = useState('')
+  useEffect(() => {
+    void tunnelled()('/api/health')
+      .then((r) => r.json())
+      .then((h: { version?: string }) => setEngine(h.version ?? ''))
+      .catch(() => setEngine(''))
+  }, [])
+  const build = engine && engine !== version ? ` (engine ${engine})` : ''
+  return (
+    <>
+      Version {version || 'unknown'}
+      {build}
+    </>
+  )
+}
 
 /** Shown when there is no session to show, or it has gone. */
 function NoBoard() {
@@ -79,6 +103,13 @@ createRoot(root).render(
                     </Route>
                     <Route path="*" element={<NoBoard />} />
                   </Routes>
+                  <Text size="xs" c="dimmed" ta="center" py="lg">
+                    PCB Trace Length Analyzer · <Version /> · plugin by{' '}
+                    {/* Opened in the system browser: the plugin's page does not navigate away. */}
+                    <Anchor size="xs" href="https://embeddedci.com/tools/pcb-trace-length-analyzer">
+                      embeddedci.com
+                    </Anchor>
+                  </Text>
                 </Container>
               </AppShell.Main>
             </AppShell>

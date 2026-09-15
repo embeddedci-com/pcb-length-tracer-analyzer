@@ -333,7 +333,7 @@ func TestAPairSplitApartInTheBusStopsTheSpread(t *testing.T) {
 	if len(res) != 1 {
 		t.Fatalf("%d results for one bus", len(res))
 	}
-	if !strings.Contains(res[0].Skipped, "not neighbours") {
+	if !strings.Contains(res[0].Skipped, "not neighbors") {
 		t.Errorf("a split pair was refused with %q", res[0].Skipped)
 	}
 }

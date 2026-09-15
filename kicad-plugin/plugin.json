@@ -11,7 +11,7 @@
     {
       "identifier": "analyze",
       "name": "Trace Length Analyzer",
-      "description": "Analyse trace lengths on this board",
+      "description": "Analyze trace lengths on this board",
       "show-button": true,
       "scopes": ["pcb"],
       "entrypoint": "analyze.py",

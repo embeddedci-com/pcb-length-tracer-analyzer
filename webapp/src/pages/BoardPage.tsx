@@ -69,14 +69,17 @@ function StepNav({
   onNext,
   nextLabel,
   hint,
+  top = false,
 }: {
   onBack?: () => void
   onNext?: () => void
   nextLabel?: string
   hint?: string
+  /** Placed above the step's content rather than below it. */
+  top?: boolean
 }) {
   return (
-    <Group justify="space-between" mt="lg">
+    <Group justify="space-between" mt={top ? 0 : 'lg'}>
       <Text size="sm" c="dimmed">
         {hint}
       </Text>
@@ -275,7 +278,6 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
   // area verdict and the apply treat an Ethernet net exactly like a DQ bit.
   const wide = boardWide(analysis, headroom.data ?? null, picked)
   const brief = buildBrief(analysis, headroom.data ?? null, picked)
-  const hasWork = brief.need > 1e-6 || brief.missing.length > 0
 
   // Per-group tolerances. One place that sets them, so the bar on a group's own
   // table and the list on the Rules step can never disagree.
@@ -330,7 +332,7 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
                 )} · x${analysis.interface.width_bits} · ${analysis.interface.nets_found} nets`
               : `${analysis.board.copper_layers.length} copper layers · ${analysis.board.tracks} tracks · ${
                   analysis.interfaces?.length ?? 0
-                } interface${(analysis.interfaces?.length ?? 0) === 1 ? '' : 's'} recognised`}
+                } interface${(analysis.interfaces?.length ?? 0) === 1 ? '' : 's'} recognized`}
           </Text>
         </div>
         <Group gap="sm" align="center">
@@ -369,8 +371,16 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
       </Group>
 
       <Stepper active={step} onStepClick={setStep}>
-        <Stepper.Step label="Analyse" description="what the board needs">
+        <Stepper.Step label="Analyze" description="what the board needs">
           <Stack gap="lg" mt="md">
+            {/* At the top: the rules are what gets changed most, and the
+                report below is long. */}
+            <StepNav
+              top
+              onNext={() => setStep(1)}
+              nextLabel="Set the rules"
+              hint="Tolerances, clock offset and package lengths."
+            />
             <PackageWarning status={pkgStatus} onFix={() => setStep(1)} />
             <BoardSummary analysis={analysis} />
             {(analysis.notes?.length ?? 0) > 0 && (
@@ -475,7 +485,7 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
               measuring={headroom.isFetching}
               onRoute={routeNets.length > 0 ? () => routeMissing.mutate() : undefined}
               routing={routeMissing.isPending}
-              onContinue={brief.need > 1e-6 ? () => setStep(2) : undefined}
+              onContinue={!host && brief.need > 1e-6 ? () => setStep(2) : undefined}
               selected={picked}
               onExport={(what) => {
                 if (what === 'analysis') {
@@ -522,13 +532,6 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
                 hasResult={hasResult}
               />
             </div>
-            {hasWork && (
-              <StepNav
-                onNext={() => setStep(1)}
-                nextLabel="Set the rules"
-                hint="Nothing has been changed. Next are the tolerances these groups are judged against."
-              />
-            )}
           </Stack>
         </Stepper.Step>
 
@@ -579,13 +582,18 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
             </Stack>
             <StepNav
               onBack={() => setStep(0)}
-              onNext={() => setStep(2)}
+              onNext={host ? undefined : () => setStep(2)}
               nextLabel="Choose what to change"
               hint="These are the rules the report was produced with."
             />
           </Card>
         </Stepper.Step>
 
+        {/* Inside KiCad the tool only reads: analyze the board and set the
+            rules. Changing copper is the website's experimental half, and
+            applying to the open board is not enabled yet. */}
+        {!host && (
+          <>
         <Stepper.Step
           label={
             <Group gap={6} wrap="nowrap">
@@ -712,6 +720,8 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
             )}
           </Card>
         </Stepper.Completed>
+          </>
+        )}
       </Stepper>
     </Stack>
   )

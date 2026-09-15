@@ -153,8 +153,8 @@ export function InterfacePicker({
         </Group>
       </Group>
       <Text size="sm" c="dimmed" mb="sm">
-        Each of these was recognised from the net names on the board, so each one shows what it
-        matched on. Tick the ones you want worked on; untick anything the tool has read wrongly.
+        Each of these was recognized from the net names on the board, so each one shows what it
+        matched on. Check the ones you want worked on; uncheck anything the tool has read wrongly.
       </Text>
 
       <Accordion variant="separated" multiple>
@@ -193,7 +193,7 @@ export function InterfacePicker({
             <Accordion.Panel>
               <Stack gap="sm">
                 <Text size="xs" c="dimmed">
-                  {i.assigned ? 'You said: ' : 'Recognised by: '}
+                  {i.assigned ? 'You said: ' : 'Recognized by: '}
                   {i.evidence}
                 </Text>
                 {i.planner ? (
@@ -219,7 +219,7 @@ export function InterfacePicker({
                       label="Track width"
                       description={
                         i.geometry.measured?.includes('width')
-                          ? 'measured — confirm'
+                          ? 'measured, confirm'
                           : i.geometry.needs_width
                             ? 'nothing routed; please give it'
                             : undefined
@@ -236,7 +236,7 @@ export function InterfacePicker({
                         label="Gap between the pair"
                         description={
                           i.geometry.measured?.includes('pair spacing')
-                            ? 'measured — confirm'
+                            ? 'measured, confirm'
                             : i.geometry.needs_gap
                               ? 'nothing coupled yet; please give it'
                               : undefined
@@ -453,7 +453,7 @@ function ImpedanceRow({ iface, family }: { iface: DetectedInterface; family?: Fa
         ) : null}
       </Group>
       <Text size="xs" c="dimmed" mt={4}>
-        Estimated from the stackup in the board file, not a field solve — good for catching a
+        Estimated from the stackup in the board file, not a field solve. Good for catching a
         width nowhere near its target, not for holding one to a few percent.
         {z.layer_assumed
           ? ` Nothing is routed, so this assumes ${z.layer}: an inner layer would come out quite different.`

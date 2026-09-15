@@ -66,7 +66,7 @@ describe('RulesCard', () => {
   it('lists the net classes with the board minimums they sit above', async () => {
     renderUI(<RulesCard rules={rules} />)
     await userEvent.click(
-      screen.getByText(/The board’s own setup — minimum clearance 0.100 mm/),
+      screen.getByText(/The board’s own setup: minimum clearance 0.100 mm/),
     )
     const ddr = screen.getByText('DDR').closest('tr')!
     expect(within(ddr).getByText('0.090 mm')).toBeInTheDocument()

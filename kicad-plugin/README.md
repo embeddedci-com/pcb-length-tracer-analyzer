@@ -30,7 +30,7 @@ window forward and reads the board again, rather than opening a second one.
   **Preferences → Plugins → Enable KiCad API**.
 - KiCad installs the Python dependencies (`requirements.txt`) into the plugin's
   own environment the first time a button is pressed. PySide6 with QtWebEngine
-  is a large download — expect a few hundred MB and a minute or two, once.
+  is a large download: expect a few hundred MB and a minute or two, once.
 
 ## Install
 
@@ -85,7 +85,7 @@ KiCad (pcbnew) ── IPC API ──> plugin process (Python, PySide6)
   included, so your file is never saved for you. The `.kicad_pro` and
   `.kicad_dru` beside it are read from disk.
 - **Apply** (switched off for now) asks the engine for the result as edits (`GET …/changes`: tracks to
-  remove by uuid with their geometry, tracks to add in nanometres), checks
+  remove by uuid with their geometry, tracks to add in nanometers), checks
   every track to be removed is still on the board unchanged, and makes the
   edits between `begin_commit` and `push_commit`.
 

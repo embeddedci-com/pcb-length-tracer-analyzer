@@ -55,9 +55,11 @@ describe('the length formula before any board', () => {
     renderUI(<HowWeMeasure defaultOpen />)
     expect(screen.getByText('length = track + vias + pads + package')).toBeInTheDocument()
     const text = document.body.textContent ?? ''
-    for (const term of ['track', 'via', 'pad', 'package', 'use_height_for_length_calcs', 'DQS_P', 'CLK_N', 'offset']) {
+    for (const term of ['centerline', 'via', 'pad center', 'die length', 'use_height_for_length_calcs', 'DQS_P', 'CLK_N', 'offset']) {
       expect(text).toContain(term)
     }
+    // Short, US spelling, no em-dashes.
+    expect(text).not.toMatch(/centre|—/)
     // Nothing about "this board" without one.
     expect(screen.queryByText('On this board')).toBeNull()
   })
@@ -69,22 +71,22 @@ describe('what a board counted', () => {
       members: [member({ parts: parts({ vias: 2, via_mm: 3.188 }) }), member({ net: '/ddr4/DDR_A1', label: 'A1' })],
     })
     renderUI(<HowWeMeasure analysis={a} defaultOpen />)
-    expect(screen.getByText('Vias are counted.')).toBeInTheDocument()
     const text = document.body.textContent ?? ''
-    expect(text).toContain('1.594 mm for a via through the whole board')
-    expect(text).toContain('1 of the 2 matched routes cross at least one via')
+    expect(text).toContain('Vias: counted, 1.594 mm per through via.')
+    expect(text).toContain('1 of 2 routes cross a via.')
   })
 
   it('says vias add nothing when the board does not count their height', () => {
     renderUI(<HowWeMeasure analysis={analysis({ viaCounted: false })} defaultOpen />)
-    expect(screen.getByText('Vias add nothing.')).toBeInTheDocument()
-    expect(screen.queryByText('Vias are counted.')).toBeNull()
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('Vias: not counted (use_height_for_length_calcs is off).')
+    expect(text).not.toContain('per through via')
   })
 
   it('says where package lengths came from, or that there are none', () => {
     const pad = (mm: number): PackagePad => ({ net: 'x', pad: 'U3.A1', default_mm: mm, mm, source: mm > 0 ? 'STM32MP25xxAI' : '' })
-    expect(measureFacts(analysis({ pads: [pad(9.1)] })).packageLine).toMatch(/included for U3 \(STM32MP25xxAI table\)/)
-    expect(measureFacts(analysis({ pads: [pad(0)] })).packageLine).toMatch(/No package lengths/)
+    expect(measureFacts(analysis({ pads: [pad(9.1)] })).packageLine).toBe('U3, STM32MP25xxAI table.')
+    expect(measureFacts(analysis({ pads: [pad(0)] })).packageLine).toBe('none for U3.')
   })
 
   it('reports the largest pad entry on the board', () => {

@@ -36,7 +36,7 @@ help:
 	@echo "The KiCad plugin (kicad-plugin/):"
 	@echo "  make plugin         build the engine and the report into kicad-plugin/"
 	@echo "  make plugin-test    the plugin's Python tests (PLUGIN_PY= a Python with PySide6 + kicad-python)"
-	@echo "  make plugin-install link kicad-plugin/ into KiCad's plugins folder (KICAD_PLUGINS=...)"
+	@echo "  make plugin-install install a (dev) copy of this checkout into KiCad, beside any release"
 	@echo "  make plugin-dist    release zips for every platform into dist/"
 	@echo "  make pcm-release VERSION=x.y.z   package for KiCad's Plugin and Content Manager into PCM_REPO"
 	@echo
@@ -179,16 +179,18 @@ plugin: webapp-deps
 plugin-test: plugin
 	cd $(PLUGIN) && $(PLUGIN_PY) -m pytest -q tests
 
-# A link, not a copy: edits to the Python take effect the next time the button
-# is pressed. Restart KiCad (or Preferences -> Plugins -> Reload) after the
-# first install so it finds the new folder.
+# A development copy beside any released install: its own identifier (".dev")
+# and "(dev)" button names, running this checkout. Python edits apply on the
+# next button press; rerun `make plugin` after changing the report or the
+# engine. Restart KiCad (or Preferences -> Plugins -> Reload) after the first
+# install so it finds the new folder.
 .PHONY: plugin-install
 plugin-install: plugin
-	@mkdir -p "$(KICAD_PLUGINS)"
-	@if [ -e "$(KICAD_PLUGINS)/pcb-trace-length-analyzer" ] && [ ! -L "$(KICAD_PLUGINS)/pcb-trace-length-analyzer" ]; then \
-	  echo "$(KICAD_PLUGINS)/pcb-trace-length-analyzer exists and is not a link; remove it first"; exit 1; fi
-	ln -sfn "$(CURDIR)/$(PLUGIN)" "$(KICAD_PLUGINS)/pcb-trace-length-analyzer"
-	@echo "linked into $(KICAD_PLUGINS); restart KiCad, and enable Preferences -> Plugins -> KiCad API"
+	python3 $(PLUGIN)/scripts/dev_install.py --plugins "$(KICAD_PLUGINS)"
+
+.PHONY: plugin-uninstall
+plugin-uninstall:
+	python3 $(PLUGIN)/scripts/dev_install.py --plugins "$(KICAD_PLUGINS)" --uninstall
 
 # One zip per platform, each holding only that platform's engine. Unzip into
 # KiCad's plugins folder.

@@ -183,7 +183,7 @@ func detectLeftoverPairs(nets []string) []*Interface {
 			Name:      name,
 			IntraPair: Tolerance{MM: 0.127},
 			Evidence: fmt.Sprintf("%d pair(s) whose two halves are named as complements, "+
-				"belonging to no interface this recognises (%s)", len(ps), sample(ns, 4)),
+				"belonging to no interface this recognizes (%s)", len(ps), sample(ns, 4)),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })

@@ -97,7 +97,7 @@ export function UploadForm({ maxUploadBytes, busy, error, onSubmit }: UploadForm
       }
     >
       <div>
-        <Title order={3}>Analyse a board</Title>
+        <Title order={3}>Analyze a board</Title>
         <Text size="sm" c="dimmed">
           Drop all files here at once.
         </Text>

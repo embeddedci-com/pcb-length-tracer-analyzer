@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from . import boardio
 from .engine import Engine
+from .rules_store import RELEASE_ID, RulesStore, fallback_dir, shared_identifier
 
 # Writing a result into the open board. Off until it has been tested against a
 # live pcbnew: the edits are built, checked and unit-tested, but nobody has yet
@@ -54,13 +55,13 @@ def format_row(row: Dict[str, Any]) -> str:
     length = f"{row['length_mm']:.3f} mm{_includes(row.get('parts'))}"
     target = f"target {row['target_mm']:.3f} ±{row['tolerance_mm']:.3f}"
     if row.get("reference"):
-        return f"{head}: {length} — the reference this group is matched to"
+        return f"{head}: {length}, the reference this group is matched to"
     if row.get("in_tolerance"):
-        return f"{head}: {length}, {target} — within tolerance ({row['deviation_mm']:+.3f} mm)"
+        return f"{head}: {length}, {target}, within tolerance ({row['deviation_mm']:+.3f} mm)"
     if row.get("need_mm", 0) > 0:
-        return f"{head}: {length} (too short), {target} — extend by {row['need_mm']:.3f} mm"
+        return f"{head}: {length} (too short), {target}, extend by {row['need_mm']:.3f} mm"
     if row.get("excess_mm", 0) > 0:
-        return f"{head}: {length} (too long), {target} — shorten by {row['excess_mm']:.3f} mm"
+        return f"{head}: {length} (too long), {target}, shorten by {row['excess_mm']:.3f} mm"
     return f"{head}: {length}, {target}"
 
 
@@ -68,18 +69,31 @@ def format_lookup(resp: Dict[str, Any]) -> List[str]:
     lines = [format_row(r) for r in resp.get("nets") or []]
     for u in resp.get("unmatched") or []:
         if not u.get("exists"):
-            lines.append(f"{u['label']}: no such net on the board as it was last read — rescan?")
+            lines.append(f"{u['label']}: no such net on the board as it was last read (rescan?)")
         else:
             state = "" if u.get("complete") else ", not fully routed"
-            lines.append(f"{u['label']}: {u['length_mm']:.3f} mm{state} — not in any length-matched group")
+            lines.append(f"{u['label']}: {u['length_mm']:.3f} mm{state}, not in any length-matched group")
     return lines
 
 
 class Controller:
-    def __init__(self, engine: Engine, kicad: Any = None, board: Any = None):
+    def __init__(
+        self,
+        engine: Engine,
+        kicad: Any = None,
+        board: Any = None,
+        identifier: str = RELEASE_ID,
+        store: Optional[RulesStore] = None,
+    ):
         self.engine = engine
         self.kicad = kicad
         self.board = board
+        self.identifier = identifier
+        # Where the rules are kept between runs; found on the first read of
+        # the board, since KiCad names the folder.
+        self.store = store
+        # The board file the rules belong to.
+        self.board_key: str = ""
         self.session: Optional[str] = None
         self.filename: str = ""
         self.source: str = ""
@@ -113,7 +127,10 @@ class Controller:
         """
         self.ensure_connected()
         files = boardio.read_board(self.board)
-        previous = self.current_params()
+        self.board_key = str(files.project_dir / files.filename) if files.project_dir else files.filename
+        # The rules from this window's last read of the board, or failing that
+        # the ones saved for it the last time the plugin ran.
+        previous = self.current_params() or self._rules().load(self.board_key)
         res = self.engine.upload(files.text, files.filename, files.project, files.rules)
         sid = res["session"]["id"]
         if previous:
@@ -131,6 +148,33 @@ class Controller:
             except Exception:  # noqa: BLE001
                 pass
         return sid
+
+    def _rules(self) -> RulesStore:
+        if self.store is None:
+            path = None
+            try:
+                if self.kicad is not None:
+                    path = self.kicad.get_plugin_settings_path(shared_identifier(self.identifier))
+            except Exception:  # noqa: BLE001 -- an older KiCad: keep them in the user's config instead
+                path = None
+            self.store = RulesStore(path or fallback_dir(shared_identifier(self.identifier)))
+        return self.store
+
+    def remember(self, params: Optional[Dict[str, Any]]) -> None:
+        """Keep the board's rules for the next run of the plugin."""
+        if not params or not self.board_key:
+            return
+        try:
+            self._rules().save(self.board_key, params)
+        except OSError:
+            pass  # a settings folder that cannot be written costs persistence, not the analysis
+
+    def remember_response(self, response: Any) -> None:
+        """Keep the rules a plan or apply response says are now in force."""
+        try:
+            self.remember(response["session"]["params"])
+        except (KeyError, TypeError):
+            pass
 
     def current_params(self) -> Optional[Dict[str, Any]]:
         if not self.session:
@@ -164,7 +208,7 @@ class Controller:
             params["group_tolerance_mm"] = {}
         else:
             params["group_tolerance_mm"] = {name: float(mm) for name in self.group_names()}
-        self.engine.plan(self.session, params)
+        self.remember_response(self.engine.plan(self.session, params))
 
     def attention_nets(self) -> List[str]:
         resp = self.engine.nets(self.session, attention=True)

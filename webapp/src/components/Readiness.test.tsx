@@ -237,7 +237,7 @@ describe('Readiness: interfaces the DDR planner does not cover', () => {
     // Needed and reachable, both 4 mm: the room beside it covers it.
     expect(within(row).getAllByText('4.000 mm')).toHaveLength(2)
     // And it reaches the buckets at the bottom.
-    expect(screen.getByText(/can be matched as they are — 4.000 mm/)).toBeInTheDocument()
+    expect(screen.getByText(/can be matched as they are: 4.000 mm/)).toBeInTheDocument()
   })
 
   it('leaves an interface the user unticked out of it', () => {
@@ -329,9 +329,9 @@ describe('Readiness: what to do', () => {
 
   it('keeps the three answers separate, because they are three different jobs', () => {
     renderUI(<Readiness analysis={analysis()} headroom={headroom(rows)} measuring={false} />)
-    expect(screen.getByText(/can be matched as they are — 1.000 mm/)).toBeInTheDocument()
-    expect(screen.getByText(/need more room — 4.000 mm/)).toBeInTheDocument()
-    expect(screen.getByText(/need rerouting, not tuning — 14.251 mm/)).toBeInTheDocument()
+    expect(screen.getByText(/can be matched as they are: 1.000 mm/)).toBeInTheDocument()
+    expect(screen.getByText(/need more room: 4.000 mm/)).toBeInTheDocument()
+    expect(screen.getByText(/need rerouting, not tuning: 14.251 mm/)).toBeInTheDocument()
   })
 
   // The one instruction a person can act on without doing arithmetic in their

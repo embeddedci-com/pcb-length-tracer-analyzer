@@ -311,7 +311,7 @@ export function CandidatePicker({
           <Section
             title="Large corrections"
             colour="orange"
-            explain="These need several millimetres each. On a bus routed at its minimum clearance there is nowhere beside the track for a meander, so expect a shortfall."
+            explain="These need several millimeters each. On a bus routed at its minimum clearance there is nowhere beside the track for a meander, so expect a shortfall."
             rows={large}
             selected={selected}
             toggle={toggle}

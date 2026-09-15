@@ -49,7 +49,7 @@ describe('InterfacePicker', () => {
   // inside a panel render one interface at a time.
   it('shows what each interface was recognised by', () => {
     renderUI(<InterfacePicker interfaces={[iface()]} selected={[]} onChange={vi.fn()} />)
-    expect(screen.getByText(/Recognised by:/)).toBeInTheDocument()
+    expect(screen.getByText(/Recognized by:/)).toBeInTheDocument()
     expect(screen.getByText(/RGMII_TXD0, RGMII_RXD0, RGMII_TXC/)).toBeInTheDocument()
   })
 
@@ -106,7 +106,7 @@ describe('InterfacePicker', () => {
     const { unmount } = renderUI(
       <InterfacePicker interfaces={[iface()]} selected={[]} onChange={vi.fn()} families={families} />,
     )
-    expect(screen.getByText('measured — confirm')).toBeInTheDocument()
+    expect(screen.getByText('measured, confirm')).toBeInTheDocument()
     unmount()
 
     renderUI(

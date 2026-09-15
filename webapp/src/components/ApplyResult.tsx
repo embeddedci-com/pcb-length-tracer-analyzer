@@ -100,7 +100,7 @@ export function ApplyResult({ result, sessionId, onDownload, onStartOver }: Appl
 
       {!result.changed && (
         <Alert color="orange" variant="light" title="No board to download">
-          Not a millimetre could be fitted, so the board was left exactly as it was and there is
+          Not a millimeter could be fitted, so the board was left exactly as it was and there is
           nothing to download. Handing back the file you uploaded as though it had been corrected
           is how a board gets fabricated in the belief that it was.
         </Alert>

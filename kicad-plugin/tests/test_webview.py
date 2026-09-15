@@ -9,6 +9,7 @@ the real engine and the demo board; only pcbnew is stood in for.
 
 import base64
 import json
+import re
 import os
 import time
 from concurrent.futures import Future
@@ -169,3 +170,45 @@ def test_bundle_cannot_be_escaped(page):
     wait(lambda: run_js(page, "document.readyState") == "complete")
     r = fetch_js(page, "/../../plugin.json")
     assert r.get("xstatus") in ("403", "404") or "identifier" not in r.get("text", "")
+
+
+def test_rules_changed_in_the_report_are_saved(qapp, engine, demo_files):
+    """The page changes rules with a plan request; the window keeps what the engine answers."""
+    from types import SimpleNamespace
+
+    from trace_length_analyzer.window import AnalyzerWindow
+
+    saved = []
+    fake = SimpleNamespace(ctl=SimpleNamespace(engine=engine, remember_response=saved.append))
+    sid = engine.upload(demo_files["text"], demo_files["filename"], demo_files["project"], demo_files["rules"])["session"]["id"]
+    body = json.dumps({"params": {"clock_offset_percent": 2.5}}).encode()
+    res = AnalyzerWindow._engine_request(
+        fake, "POST", f"/api/pcb-trace-length-analyzer/sessions/{sid}/plan", body, {"Content-Type": "application/json"}
+    ).result(60)
+    assert res.status == 200
+    assert wait(lambda: len(saved) == 1)
+    assert saved[0]["session"]["params"]["clock_offset_percent"] == 2.5
+    # A read is not a change.
+    AnalyzerWindow._engine_request(fake, "GET", f"/api/pcb-trace-length-analyzer/sessions/{sid}", b"", {}).result(60)
+    assert len(saved) == 1
+
+
+def test_the_footer_names_the_version_and_links_to_embeddedci(page):
+    page.load(QUrl(f"{ORIGIN}/index.html?session={page.session}&v=9.9.9"))
+    assert wait(lambda: "plugin by" in (run_js(page, "document.body.innerText") or ""), 60)
+    text = run_js(page, "document.body.innerText")
+    assert "Version 9.9.9" in text
+    # The engine's own build, when it differs from the plugin's version: the
+    # commit a development build was made from, nothing on a release.
+    assert re.search(r"\(engine [^)]+\)", text), text
+    href = run_js(page, "(document.querySelector('a[href*=\"embeddedci.com\"]')||{}).href || ''")
+    assert "embeddedci.com" in href
+
+
+def test_the_rules_button_is_above_the_report(page):
+    page.load(QUrl(f"{ORIGIN}/index.html?session={page.session}"))
+    assert wait(lambda: "Set the rules" in (run_js(page, "document.body.innerText") or ""), 60)
+    text = run_js(page, "document.body.innerText")
+    assert text.index("Set the rules") < text.index("How lengths are measured")
+    # And only once: it used to sit at the end of the step as well.
+    assert text.count("Set the rules") == 1
