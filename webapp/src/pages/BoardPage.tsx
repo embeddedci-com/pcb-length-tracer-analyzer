@@ -546,6 +546,9 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
                 packageLengths={analysis.package_lengths}
                 controller={analysis.interface?.controller}
                 packageParts={defaults.data?.package_parts}
+                presets={defaults.data?.presets}
+                controllerValue={analysis.interface?.controller_value}
+                presetsForPart={analysis.interface?.presets_for_part}
                 busy={replan.isPending}
                 onApply={(p) => replan.mutate(p)}
               >

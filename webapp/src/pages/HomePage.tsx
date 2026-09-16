@@ -9,6 +9,7 @@ import { ApiError, type AnalyzerApi } from '../lib/analyzerApi'
 import { UploadForm } from '../components/UploadForm'
 import { WhatThisDoes } from '../components/WhatThisDoes'
 import { HowWeMeasure } from '../components/HowWeMeasure'
+import { SupportedChips } from '../components/SupportedChips'
 import { bytes, expiresIn } from '../lib/format'
 import { UnitToggle } from '../components/UnitToggle'
 import { useUnit } from '../lib/units'
@@ -58,9 +59,10 @@ export function HomePage({ api }: { api: AnalyzerApi }) {
           maxUploadBytes={defaults.data?.max_upload_bytes}
           sessionTTLSeconds={defaults.data?.session_ttl_seconds}
         />
-        <div style={{ marginTop: 'var(--mantine-spacing-md)' }}>
+        <Stack gap="sm" mt="md">
           <HowWeMeasure />
-        </div>
+          <SupportedChips presets={defaults.data?.presets} />
+        </Stack>
       </div>
 
       <Card withBorder padding="lg">

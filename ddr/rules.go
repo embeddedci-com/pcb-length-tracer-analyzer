@@ -115,14 +115,27 @@ type Rules struct {
 	MaxChipDeltaMM float64
 }
 
+// MMPerMil is one thousandth of an inch in millimetres. Exact, by definition
+// of the inch, and the only conversion used here: vendors state DDR limits in
+// mils and print a rounded millimetre beside them, and the roundings are not
+// always consistent even within one vendor.
+const MMPerMil = 0.0254
+
 // DefaultRules returns the starting-point rules described on Rules.
+//
+// ST writes its figures in mils with a rounded millimetre beside each, and its
+// two documents do not round the same way: the length equalization sheet for
+// the STM32MP25xxAI prints "+/- 12,07 mm" where AN5724 prints "+/- 475 mils
+// (12.06 mm)". Both describe 475 mil, so the mil figure is what is converted
+// here, exactly. Do not replace these with either document's rounded
+// millimetre.
 func DefaultRules() Rules {
 	return Rules{
-		DataToStrobe:    Tolerance{MM: 1.42},  // DQ/DM to their byte lane's DQS
-		IntraPair:       Tolerance{MM: 0.127}, // 5 mil
-		AddressToClock:  Tolerance{MM: 3.55},  // A/C to CLK, per fly-by leg
-		StrobeToClock:   Tolerance{MM: 12.07}, // each lane's DQS to the CLK at its device (ST's sheet)
-		MaxChipDeltaMM:  35,                   // one device's lanes against another's
+		DataToStrobe:    Tolerance{MM: 56 * MMPerMil},  // DQ/DM to their byte lane's DQS
+		IntraPair:       Tolerance{MM: 5 * MMPerMil},   // no ST limit; the tool's own
+		AddressToClock:  Tolerance{MM: 140 * MMPerMil}, // A/C to CLK, per fly-by leg
+		StrobeToClock:   Tolerance{MM: 475 * MMPerMil}, // each lane's DQS to the CLK at its device
+		MaxChipDeltaMM:  1378 * MMPerMil,               // one device's lanes against another's
 		MaxIntraPairFix: 1.0,
 	}
 }

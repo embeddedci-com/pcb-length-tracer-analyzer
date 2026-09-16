@@ -7,6 +7,7 @@
 
 import {
   Accordion,
+  Alert,
   Anchor,
   Badge,
   Button,
@@ -20,10 +21,11 @@ import {
   Text,
   Title,
 } from '@mantine/core'
+import type { ComboboxItem, ComboboxParsedItem, OptionsFilter } from '@mantine/core'
 import { useEffect, useState, type ReactNode } from 'react'
 import { LengthInput } from './LengthInput'
-import type { PackageLength, PackagePad, Params } from '../lib/analyzerApi'
-import { PARAM_HELP, mm } from '../lib/format'
+import type { PackageLength, PackagePad, Params, Preset } from '../lib/analyzerApi'
+import { PARAM_HELP, applyPreset, matchingPreset, mm } from '../lib/format'
 
 export interface ParameterFormProps {
   value: Params
@@ -36,6 +38,12 @@ export interface ParameterFormProps {
   controller?: string
   /** Parts with a package length table, to choose from. */
   packageParts?: string[]
+  /** The vendors' published rules, for the preset dropdown. */
+  presets?: Preset[]
+  /** The controller footprint's value, e.g. "STM32MP257DAI3". */
+  controllerValue?: string
+  /** Ids of the presets for that part; empty means it was not recognised. */
+  presetsForPart?: string[]
   busy?: boolean
   onApply: (p: Params) => void
   /** Rendered at the end of the DDR section. */
@@ -48,6 +56,7 @@ type NumKey =
   | 'intra_pair_mm'
   | 'address_to_clock_mm'
   | 'strobe_to_clock_mm'
+  | 'strobe_to_clock_ps'
   | 'max_chip_delta_mm'
   | 'data_to_strobe_ps'
   | 'intra_pair_ps'
@@ -95,6 +104,60 @@ function DefaultHint({
   )
 }
 
+/**
+ * Whether the rules in force are the ones for the chip on the board.
+ *
+ * The defaults are one vendor's figures, not every vendor's, and a board
+ * nobody has touched matches them -- so without this a Rockchip board would
+ * show ST's preset selected and nothing would say it was the wrong table.
+ */
+function PartMatch({
+  controllerValue,
+  forPart,
+  active,
+  onLoad,
+}: {
+  controllerValue?: string
+  forPart: Preset[]
+  active: Preset | null
+  onLoad: (p: Preset) => void
+}) {
+  if (!controllerValue) return null
+
+  if (forPart.length === 0) {
+    return (
+      <Text size="xs" c="dimmed" mt={4}>
+        The controller reads <b>{controllerValue}</b>, which is not a part with rules here. Check
+        the preset is the right one for it.
+      </Text>
+    )
+  }
+
+  if (active && forPart.some((x) => x.id === active.id)) {
+    return (
+      <Text size="xs" c="dimmed" mt={4}>
+        Matches the <b>{controllerValue}</b> on this board.
+      </Text>
+    )
+  }
+
+  return (
+    <Alert color="yellow" variant="light" mt="xs" p="xs">
+      <Text size="xs">
+        This board&rsquo;s controller reads <b>{controllerValue}</b>, and these limits are not its
+        vendor&rsquo;s.
+      </Text>
+      <Group gap="xs" mt={6}>
+        {forPart.map((x) => (
+          <Button key={x.id} size="compact-xs" variant="light" onClick={() => onLoad(x)}>
+            Load {x.name} ({x.memory})
+          </Button>
+        ))}
+      </Group>
+    </Alert>
+  )
+}
+
 export function ParameterForm({
   value,
   defaults,
@@ -103,6 +166,9 @@ export function ParameterForm({
   packageLengths,
   controller,
   packageParts,
+  presets,
+  controllerValue,
+  presetsForPart,
   busy,
   onApply,
   children,
@@ -119,24 +185,71 @@ export function ParameterForm({
   }
   const changed = JSON.stringify(p) !== JSON.stringify(value)
 
-  const lengthField = (k: NumKey, label: string, step: number) => (
-    <div>
-      <LengthInput
-        label={label}
-        description={PARAM_HELP[k]}
-        step={step}
-        min={0}
-        value={(p[k] as number | undefined) ?? 0}
-        onChange={num(k)}
-      />
-      <DefaultHint
-        value={p[k] as number | undefined}
-        def={defaults?.[k] as number | undefined}
-        show={mm}
-        onReset={() => num(k)((defaults?.[k] as number | undefined) ?? 0)}
-      />
-    </div>
+  // `asDelay` is the same limit's picosecond field, where it has one. A guide
+  // states a limit in one unit or the other, so when it is the delay that is
+  // set, this says where the number went instead of showing a bare 0 mm.
+  const lengthField = (k: NumKey, label: string, step: number, asDelay?: NumKey) => {
+    const delay = asDelay ? ((p[asDelay] as number | undefined) ?? 0) : 0
+    const inDelay = delay > 0 && ((p[k] as number | undefined) ?? 0) === 0
+    return (
+      <div>
+        <LengthInput
+          label={label}
+          description={PARAM_HELP[k]}
+          step={step}
+          min={0}
+          value={(p[k] as number | undefined) ?? 0}
+          onChange={num(k)}
+        />
+        {inDelay ? (
+          <Text size="xs" c="dimmed" mt={4}>
+            set as a delay: {delay} ps
+          </Text>
+        ) : (
+          <DefaultHint
+            value={p[k] as number | undefined}
+            def={defaults?.[k] as number | undefined}
+            show={mm}
+            onReset={() => num(k)((defaults?.[k] as number | undefined) ?? 0)}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // Which guide these limits are those of, worked out from the values, so it
+  // cannot claim a vendor for numbers somebody has since edited.
+  const preset = matchingPreset(p, presets)
+  const presetOptions = Object.entries(
+    (presets ?? []).reduce<Record<string, { value: string; label: string }[]>>((by, x) => {
+      ;(by[x.vendor] ||= []).push({ value: x.id, label: `${x.name} (${x.memory})` })
+      return by
+    }, {}),
+  ).map(([group, items]) => ({ group, items }))
+
+  // Search the part numbers as well as the label. One table usually covers
+  // several parts and the label cannot name them all, so somebody typing the
+  // part in front of them (RK3588S, AM625, STM32MP157) would otherwise be told
+  // there is nothing for their chip when there is.
+  const searchText = new Map(
+    (presets ?? []).map((x) => [
+      x.id,
+      [x.name, x.memory, x.vendor, ...(x.parts ?? [])].join(' ').toLowerCase(),
+    ]),
   )
+  // The presets for the chip the board actually carries, in the order the
+  // catalogue lists them.
+  const forPart = (presets ?? []).filter((x) => (presetsForPart ?? []).includes(x.id))
+
+  const filterPresets: OptionsFilter = ({ options, search }) => {
+    const q = search.trim().toLowerCase()
+    if (!q) return options
+    const keep = (o: ComboboxItem) =>
+      (searchText.get(o.value) ?? o.label.toLowerCase()).includes(q)
+    return (options as ComboboxParsedItem[])
+      .map((o) => ('group' in o ? { ...o, items: o.items.filter(keep) } : o))
+      .filter((o) => ('group' in o ? o.items.length > 0 : keep(o)))
+  }
 
   const psField = (k: NumKey, label: string) => (
     <NumberInput
@@ -171,15 +284,59 @@ export function ParameterForm({
           <div>
             <Title order={4}>DDR rules for this board</Title>
             <Text size="sm" c="dimmed">
-              Defaults for data, address and strobe limits follow ST&rsquo;s DDR4 length sheet.
-              Change any value to use it for this board only.
+              Pick your chip below to load its vendor&rsquo;s limits, or set any value by hand for
+              this board only.
             </Text>
           </div>
 
+          {presetOptions.length > 0 && (
+            <div>
+              <Select
+                label="Preset"
+                description="The chip vendor's own DDR rules. Choosing one sets every limit below."
+                data={presetOptions}
+                value={preset?.id ?? null}
+                placeholder="Custom (no vendor guide)"
+                clearable={false}
+                searchable
+                filter={filterPresets}
+                nothingFoundMessage="No preset for that chip"
+                onChange={(id) => {
+                  const chosen = (presets ?? []).find((x) => x.id === id)
+                  if (chosen) setP((prev) => applyPreset(prev, chosen))
+                }}
+              />
+              <PartMatch
+                controllerValue={controllerValue}
+                forPart={forPart}
+                active={preset}
+                onLoad={(x) => setP((prev) => applyPreset(prev, x))}
+              />
+              {preset ? (
+                <Text size="xs" c="dimmed" mt={4}>
+                  {preset.source}
+                  {preset.url && (
+                    <>
+                      {' '}
+                      <Anchor size="xs" href={preset.url} target="_blank">
+                        open
+                      </Anchor>
+                    </>
+                  )}
+                  {preset.note ? ` ${preset.note}` : ''}
+                </Text>
+              ) : (
+                <Text size="xs" c="dimmed" mt={4}>
+                  These limits match no preset. Pick one to load a vendor's numbers, or keep yours.
+                </Text>
+              )}
+            </div>
+          )}
+
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" verticalSpacing="md">
-            {lengthField('data_to_strobe_mm', 'Data to strobe (DQ, DQM to DQS)', 0.05)}
-            {lengthField('address_to_clock_mm', 'Address and command to clock (A/C to CLK)', 0.05)}
-            {lengthField('strobe_to_clock_mm', 'Strobe to clock (DQS to CLK)', 0.5)}
+            {lengthField('data_to_strobe_mm', 'Data to strobe (DQ, DQM to DQS)', 0.05, 'data_to_strobe_ps')}
+            {lengthField('address_to_clock_mm', 'Address and command to clock (A/C to CLK)', 0.05, 'address_to_clock_ps')}
+            {lengthField('strobe_to_clock_mm', 'Strobe to clock (DQS to CLK)', 0.5, 'strobe_to_clock_ps')}
             {lengthField('max_chip_delta_mm', 'Memory chip to memory chip', 1)}
             <div>
               <NumberInput
@@ -220,6 +377,8 @@ export function ParameterForm({
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                   {psField('data_to_strobe_ps', 'Data to strobe')}
                   {psField('address_to_clock_ps', 'Address and command to clock')}
+                  {psField('strobe_to_clock_ps', 'Strobe to clock')}
+                  {psField('intra_pair_ps', 'Pair (P to N)')}
                 </SimpleGrid>
               </Accordion.Panel>
             </Accordion.Item>

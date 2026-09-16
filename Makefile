@@ -24,6 +24,7 @@ help:
 	@echo "  make tune           analyse, tune a copy into $(WORK)/, verify with kicad-cli"
 	@echo "  make verify         compare $(WORK)/before vs $(WORK)/after with kicad-cli"
 	@echo "  make fixtures       regenerate testdata/golden-lengths.json from kicad-cli"
+	@echo "  make presets        regenerate the front end's copy of the vendor presets"
 	@echo "  make lint           gofmt check and go vet"
 	@echo "  make clean"
 	@echo
@@ -77,6 +78,13 @@ plugin-test-if-possible:
 	  echo "SKIPPED plugin tests: PLUGIN_PY=$(PLUGIN_PY) lacks pytest, kicad-python or PySide6"; \
 	  echo "  e.g. PLUGIN_PY=~/Library/Caches/kicad/10.0/python-environments/com.embeddedci.pcb-trace-length-analyzer/bin/python (after pip install pytest)"; \
 	fi
+
+# The home page lists the chips with vendor rules, and that page is rendered to
+# static HTML with the API blocked, so the list is generated into the front end
+# rather than fetched. `go test ./server/` fails while the copy is stale.
+.PHONY: presets
+presets:
+	go run ./cmd/gen-presets
 
 .PHONY: lint
 lint:

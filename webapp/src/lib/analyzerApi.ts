@@ -22,6 +22,8 @@ export interface Params {
   address_to_clock_mm: number
   /** Each byte lane's DQS pair against the clock at its device. */
   strobe_to_clock_mm?: number
+  /** The same limit as a delay, which is how Rockchip's 8-layer tables state it. */
+  strobe_to_clock_ps?: number
   /** Most one device's byte lanes may differ from another's. */
   max_chip_delta_mm?: number
   data_to_strobe_ps: number
@@ -152,6 +154,11 @@ export interface InterfaceInfo {
   controller: string
   /** The controller footprint's value: the part number a package table is found by. */
   controller_value?: string
+  /**
+   * Ids of the presets whose chip `controller_value` names. Empty means the
+   * part was not recognised, not that there is no preset for it.
+   */
+  presets_for_part?: string[]
   devices: string[]
   width_bits: number
   lanes: number
@@ -719,6 +726,48 @@ export interface ApplyResponse {
   verify_command: string
 }
 
+/**
+ * A vendor's published DDR rules for one part and one memory type.
+ *
+ * Choosing one fills in the limits from that guide's table. Every number comes
+ * from the document named in `source`, and the tool holds nothing back: after
+ * it is applied these are the board's parameters like any other.
+ */
+export interface Preset {
+  id: string
+  name: string
+  vendor: string
+  /** Part numbers the table applies to. */
+  parts?: string[]
+  /** The memory type, e.g. "LPDDR4/LPDDR4X". Rules differ by type on one part. */
+  memory: string
+  /** The document, its version and the table the numbers came from. */
+  source: string
+  url?: string
+  /** What the table says that the tool cannot express. */
+  note?: string
+  /**
+   * Parameters whose value is the tool's default because the guide states no
+   * limit for them. Everything else in `params` is the vendor's own figure.
+   */
+  unstated?: string[]
+  /** The parameters it sets. One unit of each limit is zero: guides state one or the other. */
+  params: PresetParams
+}
+
+export interface PresetParams {
+  data_to_strobe_mm: number
+  data_to_strobe_ps: number
+  intra_pair_mm: number
+  intra_pair_ps: number
+  address_to_clock_mm: number
+  address_to_clock_ps: number
+  strobe_to_clock_mm: number
+  strobe_to_clock_ps: number
+  max_chip_delta_mm: number
+  clock_offset_percent: number
+}
+
 export interface Defaults {
   params: Params
   max_upload_bytes: number
@@ -727,6 +776,8 @@ export interface Defaults {
   families?: FamilyInfo[]
   /** Parts with a package length table. */
   package_parts?: string[]
+  /** The vendors' own DDR rules, for setting every limit at once. */
+  presets?: Preset[]
 }
 
 /** One net's length against what it is matched to. Mirrors server/kicad.go. */

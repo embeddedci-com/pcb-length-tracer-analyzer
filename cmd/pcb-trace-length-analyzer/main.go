@@ -51,6 +51,7 @@ type options struct {
 	yes        bool
 	dryRun     bool
 
+	preset        string
 	dataTolMM     float64
 	strobeClockMM float64
 	chipDeltaMM   float64
@@ -163,6 +164,8 @@ After applying, verify with KiCad's own design rule check:
 	fs.BoolVar(&o.yes, "yes", false, "skip the confirmation prompt (for scripts)")
 	fs.BoolVar(&o.dryRun, "dry-run", false, "with -apply, tune in memory and report but do not write")
 
+	fs.StringVar(&o.preset, "preset", "",
+		"a chip vendor's published DDR limits, e.g. rk3588-lpddr4-hdi; \"list\" prints them. Flags given as well win")
 	fs.Float64Var(&o.dataTolMM, "data-tol-mm", ddr.DefaultRules().DataToStrobe.MM, "DQ/DM to strobe tolerance in mm (0 to disable)")
 	fs.Float64Var(&o.dataTolPS, "data-tol-ps", 0, "DQ/DM to strobe tolerance in ps (tighter of the two wins)")
 	fs.Float64Var(&o.pairTolMM, "pair-tol-mm", 0.127, "intra-pair tolerance in mm")
@@ -211,11 +214,100 @@ After applying, verify with KiCad's own design rule check:
 	if err := fs.Parse(args); err != nil {
 		return nil // flag package already reported it
 	}
+	if o.preset == "list" {
+		printPresets(stdout)
+		return nil
+	}
+	if o.preset != "" {
+		given := map[string]bool{}
+		fs.Visit(func(f *flag.Flag) { given[f.Name] = true })
+		if err := usePreset(&o, o.preset, given); err != nil {
+			return err
+		}
+	}
 	if fs.NArg() != 1 {
 		fs.Usage()
 		return fmt.Errorf("expected exactly one board file")
 	}
 	return analyse(fs.Arg(0), o, stdout, stdin)
+}
+
+// usePreset loads a vendor's published limits, leaving alone anything the
+// command line set for itself: a preset is a starting point, and a flag given
+// beside it is the more specific instruction.
+//
+// A limit the guide states as a delay clears the length it replaces, so the
+// board is held to the guide's number and not to the tighter of two the guide
+// never put together.
+func usePreset(o *options, id string, given map[string]bool) error {
+	p, ok := ddr.PresetByID(id)
+	if !ok {
+		return fmt.Errorf("no such preset: %q (try -preset list)", id)
+	}
+	for _, f := range []struct {
+		mmFlag, psFlag string
+		mm, ps         *float64
+		tol            ddr.Tolerance
+	}{
+		{"data-tol-mm", "data-tol-ps", &o.dataTolMM, &o.dataTolPS, p.DataToStrobe},
+		{"pair-tol-mm", "pair-tol-ps", &o.pairTolMM, &o.pairTolPS, p.IntraPair},
+		{"addr-tol-mm", "addr-tol-ps", &o.addrTolMM, &o.addrTolPS, p.AddressToClock},
+		{"strobe-clock-tol-mm", "", &o.strobeClockMM, nil, p.StrobeToClock},
+	} {
+		// A limit the guide does not state leaves this tool's default alone:
+		// zeroing it here would switch the check off, which is not what a
+		// silent guide asks for.
+		if f.tol.Zero() {
+			continue
+		}
+		if !given[f.mmFlag] {
+			*f.mm = f.tol.MM
+		}
+		if f.ps != nil && !given[f.psFlag] {
+			*f.ps = f.tol.PS
+		}
+	}
+	if p.StrobeToClock.PS > 0 && !given["strobe-clock-tol-mm"] {
+		// No flag carries this one as a delay; the length stays at the guide's
+		// zero, which turns the check off rather than inventing a number.
+		o.strobeClockMM = 0
+	}
+	if p.MaxChipDeltaMM > 0 && !given["chip-delta-mm"] {
+		o.chipDeltaMM = p.MaxChipDeltaMM
+	}
+	if !given["clock-offset"] {
+		o.clockPct = p.ClockOffsetPercent
+	}
+	return nil
+}
+
+// quoted is a preset's limit as its guide wrote it, rather than as the report
+// writes a measurement. Tolerance.String rounds a delay to a tenth, which is
+// right for a board and wrong here: TI's 0.75 ps would print as 0.8 ps and
+// stop matching the note beside it or the table it was copied from.
+func quoted(t ddr.Tolerance) string {
+	if t.Zero() {
+		return "not stated, tool default"
+	}
+	if t.MM > 0 {
+		return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.4f", t.MM), "0"), ".") + " mm"
+	}
+	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", t.PS), "0"), ".") + " ps"
+}
+
+// printPresets lists what -preset takes.
+func printPresets(w *os.File) {
+	fmt.Fprintln(w, "Published DDR limits, from each vendor's own layout tables:")
+	for _, p := range ddr.Presets() {
+		fmt.Fprintf(w, "\n  %s\n    %s %s (%s)\n    %s\n",
+			p.ID, p.Vendor, p.Name, p.Memory, p.Source)
+		fmt.Fprintf(w, "    data to strobe %s, pair %s, address to clock %s, strobe to clock %s\n",
+			quoted(p.DataToStrobe), quoted(p.IntraPair), quoted(p.AddressToClock), quoted(p.StrobeToClock))
+		if p.Note != "" {
+			fmt.Fprintf(w, "    %s\n", p.Note)
+		}
+	}
+	fmt.Fprintln(w, "\nA flag given beside -preset wins over it.")
 }
 
 func analyse(path string, o options, w *os.File, in *os.File) error {

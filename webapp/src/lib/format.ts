@@ -15,6 +15,7 @@ import type {
   GroupInfo,
   HeadroomResponse,
   LengthParts,
+  Preset,
   MemberInfo,
   Params,
 } from './analyzerApi'
@@ -647,6 +648,7 @@ export const PARAM_HELP: Partial<Record<keyof Params, string>> = {
   data_to_strobe_ps: 'The same limit as a delay. If both are set, the stricter one is used.',
   intra_pair_ps: 'The same limit as a delay. If both are set, the stricter one is used.',
   address_to_clock_ps: 'The same limit as a delay. If both are set, the stricter one is used.',
+  strobe_to_clock_ps: 'The same limit as a delay. If both are set, the stricter one is used.',
   include_control: 'Also match reset-type lines (RESET). Usually off, because they are not timed to the clock.',
   max_intra_pair_fix_mm:
     'For differential pairs outside DDR (USB, PCIe, and so on). DDR pairs are never lengthened on one line. Above this, reroute the pair.',
@@ -716,4 +718,44 @@ export function lengthSum(p: LengthParts | undefined | null): string | null {
 /** Whether a length includes anything besides track: vias or package. */
 export function countsMoreThanTrack(p: LengthParts | undefined | null): boolean {
   return Boolean(p && ((p.vias > 0 && p.via_mm > 0) || p.package_mm > 0))
+}
+
+/**
+ * The limits a preset decides, and nothing else.
+ *
+ * Both units of each limit are applied, one of them zero: a guide states a
+ * limit either as a length or as a delay, and leaving the other in place would
+ * hold the board to the tighter of two numbers from different tables.
+ */
+export const PRESET_KEYS = [
+  'data_to_strobe_mm',
+  'data_to_strobe_ps',
+  'intra_pair_mm',
+  'intra_pair_ps',
+  'address_to_clock_mm',
+  'address_to_clock_ps',
+  'strobe_to_clock_mm',
+  'strobe_to_clock_ps',
+  'max_chip_delta_mm',
+  'clock_offset_percent',
+] as const
+
+/** The parameters with one preset's limits in force. */
+export function applyPreset(params: Params, preset: Preset): Params {
+  const next = { ...params }
+  for (const k of PRESET_KEYS) next[k] = preset.params[k]
+  return next
+}
+
+/**
+ * Which preset a board's limits are those of, if any.
+ *
+ * Derived from the values rather than remembered, so a board can never show a
+ * vendor's name beside numbers that are no longer that vendor's.
+ */
+export function matchingPreset(params: Params, presets: Preset[] | undefined): Preset | null {
+  for (const preset of presets ?? []) {
+    if (PRESET_KEYS.every((k) => Math.abs((params[k] ?? 0) - preset.params[k]) < 1e-9)) return preset
+  }
+  return null
 }

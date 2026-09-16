@@ -117,3 +117,88 @@ func TestGroupToleranceFlag(t *testing.T) {
 		}
 	}
 }
+
+// -preset loads a vendor's table. A flag beside it is the more specific
+// instruction and has to survive, or somebody tightening one limit by hand
+// would silently get the guide's value instead.
+func TestPresetFlag(t *testing.T) {
+	t.Run("loads the vendor's limits", func(t *testing.T) {
+		o := options{}
+		if err := usePreset(&o, "rk3588-lpddr4-hdi", map[string]bool{}); err != nil {
+			t.Fatal(err)
+		}
+		if d := o.dataTolMM - 0.635; d > 1e-9 || d < -1e-9 {
+			t.Errorf("data tolerance %.4f mm, want 0.635", o.dataTolMM)
+		}
+		if o.addrTolMM != 1.016 || o.strobeClockMM != 6.35 {
+			t.Errorf("address %.4f, strobe to clock %.4f", o.addrTolMM, o.strobeClockMM)
+		}
+		if o.dataTolPS != 0 {
+			t.Errorf("a length preset left a delay behind: %.1f ps", o.dataTolPS)
+		}
+	})
+
+	t.Run("a delay preset clears the lengths it replaces", func(t *testing.T) {
+		o := options{dataTolMM: 1.42, strobeClockMM: 12.07}
+		if err := usePreset(&o, "rk3588-lpddr4-8layer", map[string]bool{}); err != nil {
+			t.Fatal(err)
+		}
+		if o.dataTolPS != 16 || o.dataTolMM != 0 {
+			t.Errorf("data %.3f mm / %.1f ps, want 16 ps alone", o.dataTolMM, o.dataTolPS)
+		}
+		if o.strobeClockMM != 0 {
+			t.Errorf("strobe to clock kept %.3f mm, which the guide states as 40 ps", o.strobeClockMM)
+		}
+	})
+
+	t.Run("keeps what the command line set itself", func(t *testing.T) {
+		o := options{dataTolMM: 0.2, addrTolMM: 9}
+		if err := usePreset(&o, "rk3588-lpddr4-hdi", map[string]bool{"data-tol-mm": true}); err != nil {
+			t.Fatal(err)
+		}
+		if o.dataTolMM != 0.2 {
+			t.Errorf("the flag's 0.2 mm was overwritten with %.3f", o.dataTolMM)
+		}
+		if o.addrTolMM != 1.016 {
+			t.Errorf("address %.4f, want the preset's 1.016", o.addrTolMM)
+		}
+	})
+
+	t.Run("refuses an unknown one", func(t *testing.T) {
+		if err := usePreset(&options{}, "rk9999", map[string]bool{}); err == nil {
+			t.Error("an unknown preset was accepted")
+		} else if !strings.Contains(err.Error(), "-preset list") {
+			t.Errorf("error does not say how to find the right name: %v", err)
+		}
+	})
+
+	t.Run("every preset the list prints can be used", func(t *testing.T) {
+		for _, p := range ddr.Presets() {
+			o := options{}
+			if err := usePreset(&o, p.ID, map[string]bool{}); err != nil {
+				t.Errorf("%s: %v", p.ID, err)
+			}
+		}
+	})
+}
+
+// `-preset list` is where somebody checks a preset against the guide it cites,
+// so the numbers it prints have to be the guide's, not rounded to what a
+// measured board is quoted to.
+func TestPresetListQuotesTheGuidesNumbers(t *testing.T) {
+	for _, c := range []struct {
+		tol  ddr.Tolerance
+		want string
+	}{
+		{ddr.Tolerance{PS: 0.75}, "0.75 ps"},
+		{ddr.Tolerance{PS: 50}, "50 ps"},
+		{ddr.Tolerance{PS: 312.5}, "312.5 ps"},
+		{ddr.Tolerance{PS: 3750}, "3750 ps"},
+		{ddr.Tolerance{MM: 12 * 0.0254}, "0.3048 mm"},
+		{ddr.Tolerance{MM: 1.42}, "1.42 mm"},
+	} {
+		if got := quoted(c.tol); got != c.want {
+			t.Errorf("quoted(%v) = %q, want %q", c.tol, got, c.want)
+		}
+	}
+}

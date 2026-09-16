@@ -45,6 +45,10 @@ type Params struct {
 	StrobeToClockMM float64 `json:"strobe_to_clock_mm"`
 	MaxChipDeltaMM  float64 `json:"max_chip_delta_mm"`
 
+	// StrobeToClockPS is the same limit as a delay, which is how Rockchip's
+	// 8-layer tables state it.
+	StrobeToClockPS float64 `json:"strobe_to_clock_ps"`
+
 	// Tolerances in picoseconds. Where both units are given for a rule, the
 	// tighter one governs.
 	DataToStrobePS   float64 `json:"data_to_strobe_ps"`
@@ -153,12 +157,14 @@ func (p Params) withDefaults() Params {
 	if p.AddressToClockMM <= 0 && p.AddressToClockPS <= 0 {
 		p.AddressToClockMM = d.AddressToClockMM
 	}
+	if p.StrobeToClockMM <= 0 && p.StrobeToClockPS <= 0 {
+		p.StrobeToClockMM = d.StrobeToClockMM
+	}
 	for _, f := range []struct {
 		v *float64
 		d float64
 	}{
 		{&p.MaxIntraPairFixMM, d.MaxIntraPairFixMM},
-		{&p.StrobeToClockMM, d.StrobeToClockMM},
 		{&p.MaxChipDeltaMM, d.MaxChipDeltaMM},
 		{&p.MaxAmplitudeMM, d.MaxAmplitudeMM},
 		{&p.MinAmplitudeMM, d.MinAmplitudeMM},
@@ -285,7 +291,7 @@ func (p Params) rules() ddr.Rules {
 		IncludeControl:     p.IncludeControl,
 		MaxIntraPairFix:    p.MaxIntraPairFixMM,
 		GroupToleranceMM:   p.GroupToleranceMM,
-		StrobeToClock:      ddr.Tolerance{MM: p.StrobeToClockMM},
+		StrobeToClock:      ddr.Tolerance{MM: p.StrobeToClockMM, PS: p.StrobeToClockPS},
 		MaxChipDeltaMM:     p.MaxChipDeltaMM,
 	}
 }
@@ -341,13 +347,20 @@ type InterfaceInfo struct {
 	Controller string `json:"controller"`
 	// ControllerValue is the controller footprint's value, the part number
 	// a package length table is recognised by.
-	ControllerValue string   `json:"controller_value,omitempty"`
-	Devices         []string `json:"devices"`
-	WidthBits       int      `json:"width_bits"`
-	Lanes           int      `json:"lanes"`
-	NetsFound       int      `json:"nets_found"`
-	Unclassified    []string `json:"unclassified,omitempty"`
-	Notes           []string `json:"notes,omitempty"`
+	ControllerValue string `json:"controller_value,omitempty"`
+
+	// PresetsForPart are the ids of the presets whose chip ControllerValue
+	// names. Empty means the part was not recognised, which the form says
+	// rather than leaving the reader to assume the limits in force are their
+	// chip's: the defaults are one vendor's figures, not every vendor's.
+	PresetsForPart []string `json:"presets_for_part,omitempty"`
+
+	Devices      []string `json:"devices"`
+	WidthBits    int      `json:"width_bits"`
+	Lanes        int      `json:"lanes"`
+	NetsFound    int      `json:"nets_found"`
+	Unclassified []string `json:"unclassified,omitempty"`
+	Notes        []string `json:"notes,omitempty"`
 }
 
 // RoutingGap is a group of nets with the same incompleteness.
@@ -1098,6 +1111,9 @@ func analyse(b *board.Board, proj *board.Project, filename string, p Params, sv 
 	}
 	if fp := b.Footprint(iface.Controller); fp != nil {
 		a.Interface.ControllerValue = fp.Value
+		for _, x := range ddr.PresetsForPart(fp.Value) {
+			a.Interface.PresetsForPart = append(a.Interface.PresetsForPart, x.ID)
+		}
 	}
 	a.Routing = routingInfo(engine, iface)
 	a.Routing.Chain = chainInfo(plan.Chain)

@@ -269,6 +269,9 @@ func (s *Service) handleDefaults(w http.ResponseWriter, r *http.Request) {
 		"families": KnownFamilies(),
 		// The parts with a package length table, for choosing one by hand.
 		"package_parts": pkglen.Parts(),
+		// The vendors' own DDR rules, for setting every limit at once from
+		// the guide for the part being built.
+		"presets": KnownPresets(),
 	})
 }
 
