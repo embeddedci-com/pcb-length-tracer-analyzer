@@ -39,7 +39,7 @@ help:
 	@echo "  make plugin-test    the plugin's Python tests (PLUGIN_PY= a Python with PySide6 + kicad-python)"
 	@echo "  make plugin-install install a (dev) copy of this checkout into KiCad, beside any release"
 	@echo "  make plugin-dist    release zips for every platform into dist/"
-	@echo "  make plugin-release VERSION=x.y.z  bump, test, build and publish a release (asks first)"
+	@echo "  make plugin-release VERSION=x.y.z  bump, test, build and publish a stable release (asks first)"
 	@echo "  make pcm-release VERSION=x.y.z   package for KiCad's Plugin and Content Manager into PCM_REPO"
 	@echo
 	@echo "  BOARD=path/to/board.kicad_pcb overrides the board (default: the demo)"
@@ -234,7 +234,11 @@ plugin-dist: webapp-deps
 
 PCM_GITHUB  ?= embeddedci-com/kicad-plugins
 PCM_REPO    ?= ../kicad-plugins
-PCM_STATUS  ?= testing
+# What the Plugin and Content Manager tells users a version is. A release is
+# stable unless it is deliberately not: the releases that have gone out were
+# all stable, and a default of "testing" meant remembering to say so every
+# time, with a version marked wrong for everyone if you forgot.
+PCM_STATUS  ?= stable
 PCM_TAG      = pcb-trace-length-analyzer-v$(VERSION)
 PCM_ZIP      = pcb-trace-length-analyzer-$(VERSION).zip
 PCM_RAW_URL ?= https://raw.githubusercontent.com/$(PCM_GITHUB)/main
@@ -255,7 +259,7 @@ pcm-engines:
 .PHONY: plugin-release
 plugin-release:
 	@case "$(VERSION)" in [0-9]*.[0-9]*.[0-9]*) ;; *) \
-	  echo "usage: make plugin-release VERSION=0.1.3 [PCM_STATUS=stable] [YES=1] [SKIP_TESTS=1] [NO_PUBLISH=1]"; \
+	  echo "usage: make plugin-release VERSION=0.1.3 [PCM_STATUS=testing] [YES=1] [SKIP_TESTS=1] [NO_PUBLISH=1]"; \
 	  echo "  (VERSION defaults to git describe, which is not a version to release)"; exit 1;; esac
 	python3 $(PLUGIN)/scripts/release.py $(VERSION) --status $(PCM_STATUS) \
 	  --repo $(PCM_REPO) --github $(PCM_GITHUB) \
@@ -263,7 +267,7 @@ plugin-release:
 
 .PHONY: pcm-release
 pcm-release: webapp-deps
-	@if [ -z "$(VERSION)" ]; then echo "usage: make pcm-release VERSION=0.1.0 [PCM_STATUS=stable] [PCM_REPO=../kicad-plugins]"; exit 1; fi
+	@if [ -z "$(VERSION)" ]; then echo "usage: make pcm-release VERSION=0.1.0 [PCM_STATUS=testing] [PCM_REPO=../kicad-plugins]"; exit 1; fi
 	@if ! grep -q '__version__ = "$(VERSION)"' $(PLUGIN)/trace_length_analyzer/__init__.py; then \
 	  echo "trace_length_analyzer/__init__.py does not say __version__ = \"$(VERSION)\"; bump it first"; exit 1; fi
 	npm --prefix webapp run build:kicad

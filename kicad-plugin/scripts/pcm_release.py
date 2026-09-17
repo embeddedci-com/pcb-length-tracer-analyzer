@@ -251,7 +251,7 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--repo", required=True, type=Path, help="the repository checkout to update")
     ap.add_argument("--download-url", required=True, help="where the archive will be downloadable from")
     ap.add_argument("--repo-url", required=True, help="the URL repository.json, packages.json and resources.zip are served under")
-    ap.add_argument("--status", default="testing", choices=["stable", "testing", "development", "deprecated"])
+    ap.add_argument("--status", default="stable", choices=["stable", "testing", "development", "deprecated"])
     ap.add_argument("--archive-dir", type=Path, default=None)
     args = ap.parse_args(argv)
     try:

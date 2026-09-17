@@ -99,3 +99,18 @@ def test_nothing_is_published_without_a_yes(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("builtins.input", raise_eof)
     assert not release.confirm("0.1.3", "testing", "org/repo", tmp_path / "a.zip", yes=False)
     assert release.confirm("0.1.3", "testing", "org/repo", tmp_path / "a.zip", yes=True)
+
+
+# A release is stable unless it is deliberately not. The releases that have
+# gone out were all stable, and a default of "testing" meant saying so on every
+# command, with a version marked wrong for everyone the one time it was missed.
+def test_a_release_is_stable_unless_asked_otherwise(monkeypatch):
+    built = {}
+    monkeypatch.setattr(release, "preflight", lambda *a, **k: None)
+    monkeypatch.setattr(release, "build", lambda version, status, repo: built.update(status=status))
+
+    release.main(["0.9.9", "--no-publish"])
+    assert built["status"] == "stable"
+
+    release.main(["0.9.9", "--no-publish", "--status", "testing"])
+    assert built["status"] == "testing"

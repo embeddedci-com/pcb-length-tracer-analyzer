@@ -9,8 +9,8 @@ one being built, or the plugin reports a version nobody can install.
 So this does the lot, in the order that is safe, and stops before anything
 leaves the machine to show what it is about to publish:
 
-    python scripts/release.py 0.1.3              # build, then ask
-    python scripts/release.py 0.1.3 --status stable
+    python scripts/release.py 0.1.3              # build, then ask; a stable release
+    python scripts/release.py 0.1.3 --status testing
     python scripts/release.py 0.1.3 --no-publish # build only, print the rest
     python scripts/release.py 0.1.3 --yes        # for a script
 
@@ -174,7 +174,9 @@ def confirm(version: str, status: str, github: str, archive: Path, yes: bool) ->
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("version", help="the version to release, e.g. 0.1.3")
-    ap.add_argument("--status", default="testing", choices=["stable", "testing", "development", "deprecated"])
+    # Stable unless said otherwise: every release so far has been one, and a
+    # default of "testing" marks a version wrong for everyone who forgets.
+    ap.add_argument("--status", default="stable", choices=["stable", "testing", "development", "deprecated"])
     ap.add_argument("--repo", type=Path, default=ROOT.parent / "kicad-plugins")
     ap.add_argument("--github", default="embeddedci-com/kicad-plugins")
     ap.add_argument("--no-publish", action="store_true", help="build only, and print what publishing would run")
