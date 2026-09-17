@@ -16,7 +16,8 @@
 
 import { Accordion, Badge, Card, Group, Stack, Table, Text, Title } from '@mantine/core'
 import type { DetectedInterface, GroupSkewInfo, PairSkewInfo } from '../lib/analyzerApi'
-import { mm } from '../lib/format'
+import { NOWRAP, mm, signedMM } from '../lib/format'
+import { NetName, SelectNetsButton } from './HostActions'
 
 /** The one-line state of a protocol, for its header. */
 export function interfaceStatus(i: DetectedInterface): { text: string; tone: string } {
@@ -34,70 +35,119 @@ export function interfaceStatus(i: DetectedInterface): { text: string; tone: str
   return { text: 'every net measured is within tolerance', tone: 'teal' }
 }
 
-function GroupRows({ groups }: { groups: GroupSkewInfo[] }) {
+/**
+ * One group of a protocol, member by member.
+ *
+ * The same reading a DDR group gives: what each net measures, how far it is
+ * from what it is matched to, and which ones are out -- with the button that
+ * selects those on the board. A count of "2 out" with no way to see which two
+ * is not something anybody can act on.
+ */
+function GroupCard({ group }: { group: GroupSkewInfo }) {
+  const rows = group.rows ?? []
+  const out = rows.filter((m) => m.routed && !m.in_tolerance && m.role !== 'reference')
   return (
-    <Table.ScrollContainer minWidth={520}>
-      <Table verticalSpacing={6}>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Group</Table.Th>
-            <Table.Th>Matched to</Table.Th>
-            <Table.Th>Nets</Table.Th>
-            <Table.Th>Spread</Table.Th>
-            <Table.Th>Tolerance</Table.Th>
-            <Table.Th>Out</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {groups.map((g) => (
-            <Table.Tr key={g.name}>
-              <Table.Td>
-                <Text size="sm" fw={500}>
-                  {g.name}
-                </Text>
-                {g.why && (
-                  <Text size="xs" c="dimmed">
-                    {g.why}
-                  </Text>
-                )}
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm">{g.reference || 'its longest net'}</Text>
-                {g.reference_mm > 0 && (
-                  <Text size="xs" c="dimmed" ff="monospace">
-                    {mm(g.reference_mm)}
-                  </Text>
-                )}
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm">{g.members ?? 0}</Text>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" ff="monospace">
-                  {mm(g.spread_mm)}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" ff="monospace">
-                  {g.limit_mm > 0 ? `±${mm(g.limit_mm)}` : 'none'}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                {g.out_of_tolerance > 0 ? (
-                  <Badge size="sm" color="orange" variant="light">
-                    {g.out_of_tolerance}
-                  </Badge>
-                ) : (
-                  <Text size="sm" c="dimmed">
-                    —
-                  </Text>
-                )}
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Card withBorder padding="md">
+      <Stack gap="xs">
+        <Group justify="space-between" align="flex-start" wrap="nowrap">
+          {/* minWidth 0 so the heading shrinks rather than squeezing the badge
+              beside it into an ellipsis. */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Title order={6} tt="capitalize">
+              {group.name}
+            </Title>
+            <Text size="xs" c="dimmed">
+              matched to {group.reference || 'its longest net'}
+              {group.reference_mm > 0 ? ` (${mm(group.reference_mm)})` : ''} · spread{' '}
+              {mm(group.spread_mm)} · tolerance{' '}
+              {group.limit_mm > 0 ? `±${mm(group.limit_mm)}` : 'none'}
+            </Text>
+            {group.why && (
+              <Text size="xs" c="dimmed">
+                {group.why}
+              </Text>
+            )}
+          </div>
+          <Group gap="xs" wrap="nowrap">
+            {out.length > 0 && (
+              <SelectNetsButton nets={out.map((m) => m.net)}>Select the ones out</SelectNetsButton>
+            )}
+            <Badge
+              variant="light"
+              style={{ flexShrink: 0 }}
+              color={group.out_of_tolerance === 0 ? 'green' : 'orange'}
+            >
+              {group.out_of_tolerance === 0 ? 'matched' : `${group.out_of_tolerance} out`}
+            </Badge>
+          </Group>
+        </Group>
+
+        {rows.length > 0 && (
+          <Table.ScrollContainer minWidth={460}>
+            <Table verticalSpacing={4}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Net</Table.Th>
+                  <Table.Th>Length</Table.Th>
+                  <Table.Th>vs the reference</Table.Th>
+                  <Table.Th>To add</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {rows.map((m) => {
+                  const bad = m.routed && !m.in_tolerance && m.role !== 'reference'
+                  return (
+                    <Table.Tr key={m.net}>
+                      <Table.Td>
+                        <Group gap={6} wrap="nowrap">
+                          <Text size="sm" c={bad ? 'orange' : undefined}>
+                            <NetName net={m.net}>{m.label}</NetName>
+                          </Text>
+                          {m.role === 'reference' && (
+                            <Badge size="xs" variant="light">
+                              reference
+                            </Badge>
+                          )}
+                        </Group>
+                        {(m.through?.length ?? 0) > 0 && (
+                          <Text size="xs" c="dimmed">
+                            through {m.through!.join(', ')}
+                          </Text>
+                        )}
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace" style={NOWRAP}>
+                          {m.routed ? mm(m.length_mm) : 'not routed'}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace" c={bad ? 'orange' : undefined} style={NOWRAP}>
+                          {m.routed && m.role !== 'reference' ? signedMM(m.deviation_mm) : '—'}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace" style={NOWRAP}>
+                          {m.need_mm > 0
+                            ? mm(m.need_mm)
+                            : (m.excess_mm ?? 0) > 0
+                              ? `shorten ${mm(m.excess_mm!)}`
+                              : '—'}
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
+                  )
+                })}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        )}
+        {rows.length === 0 && (
+          <Text size="xs" c="dimmed">
+            {group.members ?? 0} nets, none of them routed end to end yet.
+          </Text>
+        )}
+      </Stack>
+    </Card>
   )
 }
 
@@ -209,7 +259,9 @@ export function ProtocolSections({ ddr, ddrStatus, interfaces }: ProtocolSection
               <Text size="sm" c="dimmed">
                 {i.summary}
               </Text>
-              {(i.groups?.length ?? 0) > 0 && <GroupRows groups={i.groups!} />}
+              {(i.groups ?? []).map((g) => (
+                <GroupCard key={g.name} group={g} />
+              ))}
               {(i.pair_skew?.length ?? 0) > 0 && <PairRows pairs={i.pair_skew!} />}
               {i.unroutable > 0 && (
                 <Text size="xs" c="dimmed">

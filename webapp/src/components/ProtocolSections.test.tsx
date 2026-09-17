@@ -1,8 +1,21 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { ProtocolSections, interfaceStatus } from './ProtocolSections'
-import { renderUI, screen, within } from '../testRender'
+import { renderUI, screen, waitFor, within } from '../testRender'
+import { HostProvider, type BoardHost } from '../lib/host'
 import type { DetectedInterface } from '../lib/analyzerApi'
+
+// Selecting on the board is an editor's control: it renders nothing on the
+// site, and inside KiCad it has to reach the host with exactly the nets it
+// names. The same rule DDR's group table follows.
+function fakeHost(): BoardHost {
+  return {
+    name: 'KiCad',
+    selectNets: vi.fn().mockResolvedValue(undefined),
+    applyToBoard: vi.fn().mockResolvedValue({ removed: 0, added: 0, message: '' }),
+    rescan: vi.fn().mockResolvedValue(undefined),
+  }
+}
 
 // A board with six protocols on it ran them together under one heading that
 // was really only DDR's. Each one has to say where it ends and what it found.
@@ -75,15 +88,69 @@ describe('ProtocolSections', () => {
     expect(usb).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('shows what each group of a protocol is matched to', () => {
+  it('shows what each group is matched to, and never the other direction', () => {
     renderUI(<ProtocolSections interfaces={[iface({})]} />)
-    const tx = screen.getByText('transmit').closest('tr') as HTMLElement
-    expect(within(tx).getByText('ETH1.GTX_CLK')).toBeInTheDocument()
-    expect(within(tx).getByText('±10.000 mm')).toBeInTheDocument()
-    const rx = screen.getByText('receive').closest('tr') as HTMLElement
-    expect(within(rx).getByText('ETH1.RX_CLK')).toBeInTheDocument()
-    // Transmit and receive are never matched to each other.
-    expect(within(rx).queryByText('ETH1.GTX_CLK')).not.toBeInTheDocument()
+    const tx = screen.getByText('transmit').closest('div') as HTMLElement
+    expect(within(tx).getByText(/matched to ETH1.GTX_CLK/)).toBeInTheDocument()
+    expect(within(tx).getByText(/±10.000 mm/)).toBeInTheDocument()
+    const rx = screen.getByText('receive').closest('div') as HTMLElement
+    expect(within(rx).getByText(/matched to ETH1.RX_CLK/)).toBeInTheDocument()
+    expect(within(rx).queryByText(/GTX_CLK/)).not.toBeInTheDocument()
+  })
+
+  // A count of "2 out" with no way to see which two is not actionable.
+  it('names the nets that are out and offers to select them', () => {
+    const rows = [
+      { net: '/eth/RXD0', label: 'RXD0', role: '', routed: true, length_mm: 40, delay_ps: 0, deviation_mm: 0.4, need_mm: 0, need_ps: 0, in_tolerance: true, headroom_mm: 0, needs_reroute: false },
+      { net: '/eth/RXD1', label: 'RXD1', role: '', routed: true, length_mm: 62, delay_ps: 0, deviation_mm: 22, need_mm: 0, excess_mm: 12, need_ps: 0, in_tolerance: false, headroom_mm: 0, needs_reroute: false },
+      { net: '/eth/RX_CLK', label: 'RX_CLK', role: 'reference', routed: true, length_mm: 38, delay_ps: 0, deviation_mm: 0, need_mm: 0, need_ps: 0, in_tolerance: true, headroom_mm: 0, needs_reroute: false, through: ['R80'] },
+    ]
+    renderUI(
+      <ProtocolSections
+        interfaces={[
+          iface({
+            groups: [
+              { name: 'receive', reference: 'ETH1.RX_CLK', reference_mm: 38, spread_mm: 24, limit_mm: 10, out_of_tolerance: 1, unroutable: 0, members: 3, rows },
+            ],
+          }),
+        ]}
+      />,
+    )
+    expect(screen.getByText('RXD1')).toBeInTheDocument()
+    expect(screen.getByText('+22.000 mm')).toBeInTheDocument()
+    expect(screen.getByText('shorten 12.000 mm')).toBeInTheDocument()
+    // The net that passes through a series part says so.
+    expect(screen.getByText('through R80')).toBeInTheDocument()
+    // No editor here, so no select button -- the same as a DDR group.
+    expect(screen.queryByRole('button', { name: /Select the ones out/ })).not.toBeInTheDocument()
+  })
+
+  it('selects exactly the nets that are out, inside an editor', async () => {
+    const user = userEvent.setup()
+    const host = fakeHost()
+    const rows = [
+      { net: '/eth/RXD0', label: 'RXD0', role: '', routed: true, length_mm: 40, delay_ps: 0, deviation_mm: 0.4, need_mm: 0, need_ps: 0, in_tolerance: true, headroom_mm: 0, needs_reroute: false },
+      { net: '/eth/RXD1', label: 'RXD1', role: '', routed: true, length_mm: 62, delay_ps: 0, deviation_mm: 22, need_mm: 0, excess_mm: 12, need_ps: 0, in_tolerance: false, headroom_mm: 0, needs_reroute: false },
+      { net: '/eth/RXD2', label: 'RXD2', role: '', routed: false, length_mm: 0, delay_ps: 0, deviation_mm: 0, need_mm: 0, need_ps: 0, in_tolerance: false, headroom_mm: 0, needs_reroute: false },
+      { net: '/eth/RX_CLK', label: 'RX_CLK', role: 'reference', routed: true, length_mm: 38, delay_ps: 0, deviation_mm: 0, need_mm: 0, need_ps: 0, in_tolerance: true, headroom_mm: 0, needs_reroute: false },
+    ]
+    renderUI(
+      <HostProvider host={host}>
+        <ProtocolSections
+          interfaces={[
+            iface({
+              groups: [
+                { name: 'receive', reference: 'ETH1.RX_CLK', reference_mm: 38, spread_mm: 24, limit_mm: 10, out_of_tolerance: 1, unroutable: 1, members: 4, rows },
+              ],
+            }),
+          ]}
+        />
+      </HostProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: /Select the ones out/ }))
+    // The one that is out. Not the reference, and not one with no copper to
+    // select.
+    await waitFor(() => expect(host.selectNets).toHaveBeenCalledWith(['/eth/RXD1']))
   })
 
   it('leaves out the planner’s own interface and anything with nothing measured', () => {

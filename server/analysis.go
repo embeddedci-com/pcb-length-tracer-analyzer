@@ -468,6 +468,11 @@ type MemberInfo struct {
 	From        string  `json:"from,omitempty"`
 	To          string  `json:"to,omitempty"`
 
+	// Through are the parts a signal passes through where its net is only part
+	// of it: a series resistor or a coupling capacitor splits it in two, and
+	// LengthMM above is the sum of the segments.
+	Through []string `json:"through,omitempty"`
+
 	// HeadroomMM is the most length the space beside this route could hold.
 	// Zero when it was not measured.
 	//

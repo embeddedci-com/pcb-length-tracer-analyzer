@@ -252,6 +252,12 @@ type GroupSkewInfo struct {
 	// Members is how many nets it has.
 	Members int `json:"members,omitempty"`
 
+	// Rows is every member measured, in tolerance or not, the way a DDR group
+	// lists its own. Without it a protocol that is not DDR could say how many
+	// nets were out but never which, and there was nothing to select on the
+	// board.
+	Rows []MemberInfo `json:"rows,omitempty"`
+
 	// Why says what the group is and where its limit comes from, because the
 	// limit is a starting point and the vendor's guide governs.
 	Why string `json:"why,omitempty"`
@@ -371,7 +377,32 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 					Routed: m.Routed, LengthMM: m.LengthMM, Parts: joinedParts(e, m.Net), TargetMM: gi.TargetMM,
 					ToleranceMM: g.LimitMM, Reference: refNets[m.Net],
 				}))
+
+				// The same row a DDR group shows, for every member rather than
+				// only the ones asking for length.
+				dev := m.LengthMM - gi.TargetMM
+				row := MemberInfo{
+					Net: m.Net, Label: label(m.Net), Routed: m.Routed,
+					LengthMM: m.LengthMM, Parts: joinedParts(e, m.Net),
+					DeviationMM: dev,
+					InTolerance: !m.Routed || g.LimitMM <= 0 || math.Abs(dev) <= g.LimitMM,
+					Through:     m.Through,
+				}
+				if refNets[m.Net] {
+					row.Role = "reference"
+					row.InTolerance = true
+					row.DeviationMM = m.LengthMM - gi.TargetMM
+				}
+				if m.Routed && !row.InTolerance {
+					if dev < 0 {
+						row.NeedMM = -dev
+					} else {
+						row.ExcessMM = dev - g.LimitMM
+					}
+				}
+				gi.Rows = append(gi.Rows, row)
 			}
+			sort.Slice(gi.Rows, func(x, y int) bool { return gi.Rows[x].LengthMM < gi.Rows[y].LengthMM })
 			for _, m := range g.Members {
 				if !m.Routed || refNets[m.Net] {
 					continue

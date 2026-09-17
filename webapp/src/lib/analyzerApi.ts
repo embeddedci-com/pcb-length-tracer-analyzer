@@ -200,6 +200,11 @@ export interface GroupSkewInfo {
   members?: number
   /** What the group is and where its limit comes from. */
   why?: string
+  /**
+   * Every member measured, in tolerance or not, the way a DDR group lists its
+   * own. Without it a protocol could say how many nets were out but not which.
+   */
+  rows?: MemberInfo[]
 }
 
 /**
@@ -430,6 +435,8 @@ export interface MemberInfo {
    * that can actually be used: each leg's room capped at what that leg needs,
    * summed. Room beside one leg cannot be lent to another.
    */
+  /** Parts the signal passes through: a series resistor splits a net, and the length is the sum. */
+  through?: string[]
   headroom_mm: number
   /** True when the net asks for more length than any meander could supply, whatever room were opened, or is longer than its reference. */
   needs_reroute: boolean
