@@ -39,8 +39,9 @@ help:
 	@echo "  make plugin-test    the plugin's Python tests (PLUGIN_PY= a Python with PySide6 + kicad-python)"
 	@echo "  make plugin-install install a (dev) copy of this checkout into KiCad, beside any release"
 	@echo "  make plugin-dist    release zips for every platform into dist/"
-	@echo "  make plugin-release VERSION=x.y.z  bump, test, build and publish a stable release (asks first)"
-	@echo "  make pcm-release VERSION=x.y.z   package for KiCad's Plugin and Content Manager into PCM_REPO"
+	@echo "  make plugin-release release a new version, start to finish; run it with no"
+	@echo "                      VERSION and it explains the whole flow"
+	@echo "  make pcm-release VERSION=x.y.z   the package on its own, without publishing it"
 	@echo
 	@echo "  BOARD=path/to/board.kicad_pcb overrides the board (default: the demo)"
 	@echo "                      see demo-pcb/README.md before replacing the fixture"
@@ -259,8 +260,28 @@ pcm-engines:
 .PHONY: plugin-release
 plugin-release:
 	@case "$(VERSION)" in [0-9]*.[0-9]*.[0-9]*) ;; *) \
-	  echo "usage: make plugin-release VERSION=0.1.3 [PCM_STATUS=testing] [YES=1] [SKIP_TESTS=1] [NO_PUBLISH=1]"; \
-	  echo "  (VERSION defaults to git describe, which is not a version to release)"; exit 1;; esac
+	  cur=$$(sed -n 's/^__version__ = "\(.*\)"/\1/p' $(PLUGIN)/trace_length_analyzer/__init__.py); \
+	  next=$$(echo "$$cur" | awk -F. '{printf "%d.%d.%d", $$1, $$2, $$3 + 1}'); \
+	  echo "Release the KiCad plugin. It needs the version to release:"; \
+	  echo; \
+	  echo "    make plugin-release VERSION=$$next"; \
+	  echo; \
+	  echo "$$cur is the version in this checkout, so $$next is the next patch."; \
+	  echo "(VERSION on its own defaults to git describe, which is not a version to release.)"; \
+	  echo; \
+	  echo "That one command does all of it, in the order that is safe:"; \
+	  echo "  bump __version__, run the tests, build the engine for every platform,"; \
+	  echo "  update the $(PCM_REPO) checkout, then show what it is about to publish"; \
+	  echo "  and ask. On yes: upload the archive, push the repository index, commit"; \
+	  echo "  the bump. Everything before the question is local."; \
+	  echo; \
+	  echo "  PCM_STATUS=testing  publish as testing; the default is stable"; \
+	  echo "  NO_PUBLISH=1        build, and print the publish commands instead of running them"; \
+	  echo "  YES=1               do not ask (for a script)"; \
+	  echo "  SKIP_TESTS=1        skip make test"; \
+	  echo; \
+	  echo "Nothing has been released."; \
+	  exit 1;; esac
 	python3 $(PLUGIN)/scripts/release.py $(VERSION) --status $(PCM_STATUS) \
 	  --repo $(PCM_REPO) --github $(PCM_GITHUB) \
 	  $(if $(YES),--yes,) $(if $(SKIP_TESTS),--skip-tests,) $(if $(NO_PUBLISH),--no-publish,)
