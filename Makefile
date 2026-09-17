@@ -39,6 +39,7 @@ help:
 	@echo "  make plugin-test    the plugin's Python tests (PLUGIN_PY= a Python with PySide6 + kicad-python)"
 	@echo "  make plugin-install install a (dev) copy of this checkout into KiCad, beside any release"
 	@echo "  make plugin-dist    release zips for every platform into dist/"
+	@echo "  make plugin-release VERSION=x.y.z  bump, test, build and publish a release (asks first)"
 	@echo "  make pcm-release VERSION=x.y.z   package for KiCad's Plugin and Content Manager into PCM_REPO"
 	@echo
 	@echo "  BOARD=path/to/board.kicad_pcb overrides the board (default: the demo)"
@@ -247,6 +248,18 @@ pcm-engines:
 	  CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" \
 	    -o $(PLUGIN)/bin/$$tag/pcb-trace-length-analyzer-engine$$ext ./cmd/pcb-trace-length-analyzer-engine; \
 	done
+
+# One command for a release: bump, test, build, then show what it is about to
+# publish and ask. Everything before the question is local, so a failed build
+# publishes nothing. `pcm-release` below is the build on its own.
+.PHONY: plugin-release
+plugin-release:
+	@case "$(VERSION)" in [0-9]*.[0-9]*.[0-9]*) ;; *) \
+	  echo "usage: make plugin-release VERSION=0.1.3 [PCM_STATUS=stable] [YES=1] [SKIP_TESTS=1] [NO_PUBLISH=1]"; \
+	  echo "  (VERSION defaults to git describe, which is not a version to release)"; exit 1;; esac
+	python3 $(PLUGIN)/scripts/release.py $(VERSION) --status $(PCM_STATUS) \
+	  --repo $(PCM_REPO) --github $(PCM_GITHUB) \
+	  $(if $(YES),--yes,) $(if $(SKIP_TESTS),--skip-tests,) $(if $(NO_PUBLISH),--no-publish,)
 
 .PHONY: pcm-release
 pcm-release: webapp-deps
