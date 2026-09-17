@@ -368,7 +368,7 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 				grouped[m.Net] = true
 				d.netRows = append(d.netRows, judge(NetStatus{
 					Net: m.Net, Label: label(m.Net), Interface: i.Name, Group: g.Name,
-					Routed: m.Routed, LengthMM: m.LengthMM, Parts: routeParts(e, m.Net), TargetMM: gi.TargetMM,
+					Routed: m.Routed, LengthMM: m.LengthMM, Parts: joinedParts(e, m.Net), TargetMM: gi.TargetMM,
 					ToleranceMM: g.LimitMM, Reference: refNets[m.Net],
 				}))
 			}
@@ -395,10 +395,10 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 				reroute := excess > 0 || need > 0.25*m.LengthMM
 				c := MemberInfo{
 					Net: m.Net, Label: label(m.Net), Routed: true,
-					LengthMM: m.LengthMM, Parts: routeParts(e, m.Net), DeviationMM: dev, NeedMM: need,
+					LengthMM: m.LengthMM, Parts: joinedParts(e, m.Net), DeviationMM: dev, NeedMM: need,
 					NeedsReroute: reroute, pathTracks: pathOf(m.Net),
 					Legs: []CandidateLeg{{
-						Group: g.Name, LengthMM: m.LengthMM, Parts: routeParts(e, m.Net), NeedMM: need, ExcessMM: excess,
+						Group: g.Name, LengthMM: m.LengthMM, Parts: joinedParts(e, m.Net), NeedMM: need, ExcessMM: excess,
 						TargetMM: gi.TargetMM, NeedsReroute: reroute, pathTracks: pathOf(m.Net),
 					}},
 				}

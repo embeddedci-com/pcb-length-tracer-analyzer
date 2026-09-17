@@ -610,6 +610,30 @@ func routeParts(e *netlen.Engine, net string) *LengthParts {
 	return nil
 }
 
+// joinedParts is routeParts for a signal that crosses a series part: the sum
+// over its segments, so the breakdown adds up to the length shown beside it.
+// A row whose length is the whole signal and whose parts are one segment of it
+// would not survive a reader adding the columns up.
+func joinedParts(e *netlen.Engine, net string) *LengthParts {
+	j := e.Joined(net)
+	if !j.Split() {
+		return routeParts(e, net)
+	}
+	out := &LengthParts{}
+	for _, seg := range j.Segments {
+		p := routeParts(e, seg)
+		if p == nil {
+			continue
+		}
+		out.TrackMM += p.TrackMM
+		out.ViaMM += p.ViaMM
+		out.Vias += p.Vias
+		out.PadMM += p.PadMM
+		out.PackageMM += p.PackageMM
+	}
+	return out
+}
+
 // GroupInfo is a set of nets that have to match.
 type GroupInfo struct {
 	Name              string  `json:"name"`

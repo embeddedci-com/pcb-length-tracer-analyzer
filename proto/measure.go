@@ -77,6 +77,11 @@ type MemberSkew struct {
 	DeviationMM float64
 	Routed      bool
 	InTolerance bool
+
+	// Through are the parts the signal passes through, when the net is only
+	// part of it: a series resistor or a coupling capacitor splits a signal
+	// into two nets, and the length above is the sum of both.
+	Through []string `json:"through,omitempty"`
 }
 
 // Assessment is everything measured about one interface.
@@ -97,14 +102,36 @@ type Assessment struct {
 }
 
 // Assess measures an interface.
+// joiner is an engine that can follow a signal through a series part. The
+// interface is asked for rather than required, so a stand-in measurer in a test
+// stays a one-method thing.
+type joiner interface {
+	Joined(net string) *netlen.Joined
+}
+
 func (i *Interface) Assess(m Measurer) *Assessment {
 	a := &Assessment{}
+	j, canJoin := m.(joiner)
+
+	// A length is the whole signal: a series resistor or coupling capacitor
+	// splits a net in two, and measuring only the near side understates each
+	// line of a bus by a different amount, which is the skew being looked for.
 	length := func(net string) (float64, bool) {
+		if canJoin {
+			x := j.Joined(net)
+			return x.LengthMM, x.Found
+		}
 		mm := m.Measure(net)
 		if mm == nil || !mm.Longest.Found {
 			return 0, false
 		}
 		return mm.Longest.Length, true
+	}
+	through := func(net string) []string {
+		if !canJoin {
+			return nil
+		}
+		return j.Joined(net).Through
 	}
 
 	seen := map[string]bool{}
@@ -142,7 +169,7 @@ func (i *Interface) Assess(m Measurer) *Assessment {
 		lo, hi := math.Inf(1), math.Inf(-1)
 		for _, net := range g.Members {
 			l, ok := length(net)
-			ms := MemberSkew{Net: net, LengthMM: l, Routed: ok}
+			ms := MemberSkew{Net: net, LengthMM: l, Routed: ok, Through: through(net)}
 			if ok {
 				lo, hi = math.Min(lo, l), math.Max(hi, l)
 			} else {

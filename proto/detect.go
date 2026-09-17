@@ -208,6 +208,37 @@ func byInstance(nets []string, want func(sig string) bool) map[string][]string {
 	return out
 }
 
+// ethSignal finds an Ethernet signal name at the end of a net's leaf, and
+// returns it with whatever came before it as the instance.
+//
+// signal() cannot do this job here. It takes everything before the first
+// underscore to be an instance, which turns "TX_CTL" into "CTL" and "GTX_CLK"
+// into "CLK" -- and those are exactly the nets each direction is matched to,
+// so a bus named that way lost its clock and matched its data to itself. The
+// signal names in this family carry underscores of their own, so the only way
+// to read them is to look for the signal first and call the rest the instance.
+func ethSignal(net string, res ...*regexp.Regexp) (sig, inst string, ok bool) {
+	up := strings.ToUpper(leaf(net))
+	// Every place a signal name could start: the whole leaf first, so the
+	// longest match wins and "ETH_TX_CLK" is TX_CLK on instance ETH rather
+	// than CLK on instance ETH_TX.
+	starts := []int{0}
+	for i := 0; i < len(up); i++ {
+		if up[i] == '_' || up[i] == '.' {
+			starts = append(starts, i+1)
+		}
+	}
+	for _, at := range starts {
+		cand := up[at:]
+		for _, re := range res {
+			if re.MatchString(cand) {
+				return cand, strings.Trim(up[:at], "_."), true
+			}
+		}
+	}
+	return "", "", false
+}
+
 // ---- the interfaces ----
 
 var ddrRE = regexp.MustCompile(`^(DQ[0-9]+|DQS[0-9]*(_[PNTC])?|DQM[0-9]*|DM[0-9]*|A[0-9]+|BA[0-9]*|BG[0-9]*|CK[E]?[0-9]*(_[PNTC])?|CLK(_[PNTC])?|CS[N]?[0-9]*|RAS[N]?|CAS[N]?|WE[N]?|ACT[N]?|ODT[0-9]*|PAR|RESET[N]?|ALERT[N]?|TEN|ZQ)$`)
@@ -247,23 +278,37 @@ func detectDDR(nets []string) []*Interface {
 }
 
 var (
-	rgmiiTX = regexp.MustCompile(`^(TXD[0-3]|TX_?(CTL|EN|ER)|GTX_?CLK|TX_?CLK)$`)
-	rgmiiRX = regexp.MustCompile(`^(RXD[0-3]|RX_?(CTL|DV|ER)|RX_?CLK)$`)
+	rgmiiTX = regexp.MustCompile(`^(TXD[0-3]|TX_?(CTL|EN|ER)|GTX_?CLK|TX_?CLK|TXC)$`)
+	rgmiiRX = regexp.MustCompile(`^(RXD[0-3]|RX_?(CTL|DV|ER)|RX_?CLK|RXC)$`)
 	rgmiiMD = regexp.MustCompile(`^(MDC|MDIO|MDINT|NRST|CLK125|INT|RESET[N]?)$`)
 )
 
 func detectRGMII(nets []string) []*Interface {
-	groups := byInstance(nets, func(s string) bool {
-		return rgmiiTX.MatchString(s) || rgmiiRX.MatchString(s) || rgmiiMD.MatchString(s)
-	})
+	// The signal is found first and the instance is what precedes it, because
+	// these names carry underscores: see ethSignal.
+	claimed := map[string][]string{}
+	sigOf := map[string]string{}
+	for _, n := range nets {
+		sig, inst, ok := ethSignal(n, rgmiiTX, rgmiiRX, rgmiiMD)
+		if !ok {
+			continue
+		}
+		if inst == "" {
+			inst = strings.TrimSuffix(strings.TrimPrefix(scope(n), "/"), "/")
+		}
+		claimed[inst] = append(claimed[inst], n)
+		sigOf[n] = sig
+	}
+
 	var out []*Interface
-	for inst, ns := range groups {
+	for inst, ns := range claimed {
+		sort.Strings(ns)
 		var tx, rx []string
 		for _, n := range ns {
 			switch {
-			case rgmiiTX.MatchString(signal(n)):
+			case rgmiiTX.MatchString(sigOf[n]):
 				tx = append(tx, n)
-			case rgmiiRX.MatchString(signal(n)):
+			case rgmiiRX.MatchString(sigOf[n]):
 				rx = append(rx, n)
 			}
 		}
@@ -280,14 +325,14 @@ func detectRGMII(nets []string) []*Interface {
 		// own clock, so each is matched to that clock and to nothing else.
 		iface.Groups = []Group{
 			{
-				Name: "transmit", Reference: clockOf(tx, `^(GTX_?CLK|TX_?CLK)$`), Members: tx,
+				Name: "transmit", Reference: ethClockOf(tx, sigOf, `^(GTX_?CLK|TX_?CLK|TXC)$`), Members: tx,
 				Tolerance: Tolerance{MM: 10.0},
 				Why: "RGMII transmit is source-synchronous: TXD and TX_CTL travel with GTX_CLK, " +
 					"so they are matched to it. 10 mm is a widely published starting point; the " +
 					"figure that matters is the setup and hold budget in the PHY's data sheet",
 			},
 			{
-				Name: "receive", Reference: clockOf(rx, `^RX_?CLK$`), Members: rx,
+				Name: "receive", Reference: ethClockOf(rx, sigOf, `^(RX_?CLK|RXC)$`), Members: rx,
 				Tolerance: Tolerance{MM: 10.0},
 				Why: "RGMII receive travels with RX_CLK from the PHY, and is matched to it. " +
 					"Same caveat as transmit: the PHY's data sheet governs",
@@ -295,7 +340,20 @@ func detectRGMII(nets []string) []*Interface {
 		}
 		out = append(out, iface)
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Instance < out[j].Instance })
 	return out
+}
+
+// ethClockOf picks the clock out of a direction's nets, by the signal name
+// ethSignal already read rather than by re-parsing.
+func ethClockOf(nets []string, sigOf map[string]string, pattern string) string {
+	re := regexp.MustCompile(pattern)
+	for _, n := range nets {
+		if re.MatchString(sigOf[n]) {
+			return n
+		}
+	}
+	return ""
 }
 
 var mipiRE = regexp.MustCompile(`^(CK|CLK|D[0-9]+)(CON)?(_[PN]|[+-])$`)

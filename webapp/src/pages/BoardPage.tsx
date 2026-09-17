@@ -22,7 +22,6 @@ import {
   Loader,
   Stack,
   Stepper,
-  Table,
   Text,
   Title,
 } from '@mantine/core'
@@ -36,6 +35,7 @@ import {
 } from '../lib/analyzerApi'
 import { BoardSummary } from '../components/BoardSummary'
 import { GroupTable } from '../components/GroupTable'
+import { PairRows, ProtocolSections } from '../components/ProtocolSections'
 import { ParameterForm } from '../components/ParameterForm'
 import { CandidatePicker } from '../components/CandidatePicker'
 import { ApplyResult } from '../components/ApplyResult'
@@ -272,6 +272,13 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
   // and not an empty state to apologise for: the interfaces below are still
   // measured, and everything DDR-shaped simply has nothing to say.
   const hasDDR = (analysis.groups?.length ?? 0) > 0
+  // What the DDR section says about itself, in the same words the other
+  // protocols use: the planner produces groups rather than a DetectedInterface
+  // the status helper can read.
+  const ddrOut = (analysis.groups ?? []).reduce((n, g) => n + (g.out_of_tolerance ?? 0), 0)
+  const ddrStatus = ddrOut > 0
+    ? { text: `${ddrOut} out of tolerance`, tone: 'orange' }
+    : { text: 'every matched net is within tolerance', tone: 'teal' }
 
   // The whole board in the shape the DDR half has: every ticked interface's
   // short nets are candidates and its groups are groups, so the picker, the
@@ -410,67 +417,53 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
             {/* Before any figure: what a length on this page is made of, and
                 what this board counted -- vias, pads, package. */}
             <HowWeMeasure analysis={analysis} defaultOpen />
-            {hasDDR && (
-            <div>
-              <Title order={4} mb="xs">
-                Groups
-              </Title>
-              <Text size="sm" c="dimmed" mb="sm">
-                Data lines (DQ) are matched to the strobe (DQS) of their byte. Address and command
-                lines are matched to the clock (CLK) at each memory chip. All lengths are measured
-                from the controller.
-              </Text>
-              <div style={{ marginBottom: 'var(--mantine-spacing-sm)' }}>
-                <PackageNote status={pkgStatus} />
-              </div>
-
-              <Stack gap="md">
-                {analysis.groups.map((g) => (
-                  <GroupTable
-                    key={g.name}
-                    group={g}
-                    overridden={g.name in groupTol}
-                    onTolerance={(v) => setGroupTolerance(g.name, v)}
-                    busy={replan.isPending}
-                  />
-                ))}
-              </Stack>
-            </div>
-            )}
-            {(analysis.pair_skew?.length ?? 0) > 0 && (
-              <Card withBorder padding="md">
-                <Title order={5}>Differential pair skew</Title>
-                <Text size="sm" c="dimmed" mb="xs">
-                  For information. ST&rsquo;s routing guide (AN5724) sets no limit on the difference
-                  between the P and N line of a DQS or CLK pair, and does not allow adding length to
-                  only one of them. The pair&rsquo;s length is the average of both.
-                </Text>
-                <Table.ScrollContainer minWidth={380}>
-                  <Table verticalSpacing={4}>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Pair</Table.Th>
-                        <Table.Th>P to N difference</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {analysis.pair_skew!.map((p) => (
-                        <Table.Tr key={p.pair}>
-                          <Table.Td>
-                            <Text size="sm">{p.pair}</Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm" ff="monospace">
-                              {mm(p.skew_mm)}
-                            </Text>
-                          </Table.Td>
-                        </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                </Table.ScrollContainer>
-              </Card>
-            )}
+            {/* One section per protocol. A board with DDR, Ethernet, MIPI,
+                PCIe, eMMC and USB on it used to run them together under one
+                heading called "Groups" that was really only DDR's. */}
+            <ProtocolSections
+              interfaces={analysis.interfaces ?? []}
+              ddrStatus={ddrStatus}
+              ddr={
+                hasDDR ? (
+                  <Stack gap="md">
+                    <Text size="sm" c="dimmed">
+                      Data lines (DQ) are matched to the strobe (DQS) of their byte. Address and
+                      command lines are matched to the clock (CLK) at each memory chip. All lengths
+                      are measured from the controller.
+                    </Text>
+                    <PackageNote status={pkgStatus} />
+                    {analysis.groups.map((g) => (
+                      <GroupTable
+                        key={g.name}
+                        group={g}
+                        overridden={g.name in groupTol}
+                        onTolerance={(v) => setGroupTolerance(g.name, v)}
+                        busy={replan.isPending}
+                      />
+                    ))}
+                    {(analysis.pair_skew?.length ?? 0) > 0 && (
+                      <PairRows
+                        pairs={analysis.pair_skew!.map((p) => ({
+                          name: p.pair,
+                          p: p.pair,
+                          n: p.pair,
+                          skew_mm: p.skew_mm,
+                          limit_mm: 0,
+                          routed: true,
+                          in_tolerance: true,
+                        }))}
+                        note={
+                          "For information. ST's routing guide (AN5724) sets no limit on the " +
+                          'difference between the P and N line of a DQS or CLK pair, and does not ' +
+                          "allow adding length to only one of them. The pair's length is the " +
+                          'average of both.'
+                        }
+                      />
+                    )}
+                  </Stack>
+                ) : null
+              }
+            />
             <ChecksCard checks={analysis.checks} />
             <LayerChecks findings={analysis.layers} />
             {/* What needs doing comes after what was found. Having parsed a board, the

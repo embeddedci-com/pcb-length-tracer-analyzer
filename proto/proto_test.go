@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -431,5 +432,90 @@ func TestNoGeometryMeansNoImpedance(t *testing.T) {
 			continue
 		}
 		return
+	}
+}
+
+// Each direction of an RGMII bus is matched to its own clock, so losing the
+// clock is not a cosmetic failure: the group falls back to its longest member
+// and the data is matched to data. The general signal parser reads everything
+// before the first underscore as an instance, which turns TX_CTL into CTL and
+// GTX_CLK into CLK, so these names have to be read signal-first.
+func TestRGMIIFindsItsClockInEveryNamingStyle(t *testing.T) {
+	for _, c := range []struct {
+		style          string
+		nets           []string
+		wantTX, wantRX string
+	}{
+		{
+			"hierarchical sheet",
+			[]string{"/eth/TXD0", "/eth/TXD1", "/eth/TXD2", "/eth/TXD3", "/eth/TX_CTL", "/eth/GTX_CLK",
+				"/eth/RXD0", "/eth/RXD1", "/eth/RXD2", "/eth/RXD3", "/eth/RX_CTL", "/eth/RX_CLK"},
+			"/eth/GTX_CLK", "/eth/RX_CLK",
+		},
+		{
+			"instance prefix",
+			[]string{"ETH1_TXD0", "ETH1_TXD1", "ETH1_TXD2", "ETH1_TXD3", "ETH1_TX_CTL", "ETH1_GTX_CLK",
+				"ETH1_RXD0", "ETH1_RXD1", "ETH1_RXD2", "ETH1_RXD3", "ETH1_RX_CTL", "ETH1_RX_CLK"},
+			"ETH1_GTX_CLK", "ETH1_RX_CLK",
+		},
+		{
+			"no prefix at all",
+			[]string{"TXD0", "TXD1", "TXD2", "TXD3", "TX_CTL", "GTX_CLK",
+				"RXD0", "RXD1", "RXD2", "RXD3", "RX_CTL", "RX_CLK"},
+			"GTX_CLK", "RX_CLK",
+		},
+		{
+			"TXC and RXC, as many PHYs name them",
+			[]string{"RGMII_TXD0", "RGMII_TXD1", "RGMII_TXD2", "RGMII_TXD3", "RGMII_TX_CTL", "RGMII_TXC",
+				"RGMII_RXD0", "RGMII_RXD1", "RGMII_RXD2", "RGMII_RXD3", "RGMII_RX_CTL", "RGMII_RXC"},
+			"RGMII_TXC", "RGMII_RXC",
+		},
+	} {
+		got := detectRGMII(c.nets)
+		if len(got) != 1 {
+			t.Errorf("%s: %d interfaces, want 1", c.style, len(got))
+			continue
+		}
+		for _, g := range got[0].Groups {
+			want := c.wantTX
+			if g.Name == "receive" {
+				want = c.wantRX
+			}
+			if g.Reference != want {
+				t.Errorf("%s: %s reference %q, want %q", c.style, g.Name, g.Reference, want)
+			}
+			// Four data lines, the control line and the clock.
+			if len(g.Members) != 6 {
+				t.Errorf("%s: %s has %d members, want 6: %v", c.style, g.Name, len(g.Members), g.Members)
+			}
+			if !slices.Contains(g.Members, want) {
+				t.Errorf("%s: %s does not include its own clock: %v", c.style, g.Name, g.Members)
+			}
+		}
+	}
+}
+
+// The instance is whatever precedes the signal, so two buses stay apart.
+func TestRGMIIKeepsTwoBusesApart(t *testing.T) {
+	nets := []string{}
+	for _, inst := range []string{"ETH1", "ETH2"} {
+		for _, sig := range []string{"TXD0", "TXD1", "TXD2", "TXD3", "TX_CTL", "GTX_CLK",
+			"RXD0", "RXD1", "RXD2", "RXD3", "RX_CTL", "RX_CLK"} {
+			nets = append(nets, inst+"_"+sig)
+		}
+	}
+	got := detectRGMII(nets)
+	if len(got) != 2 {
+		t.Fatalf("%d interfaces, want 2", len(got))
+	}
+	if got[0].Instance != "ETH1" || got[1].Instance != "ETH2" {
+		t.Errorf("instances %q and %q", got[0].Instance, got[1].Instance)
+	}
+	for _, i := range got {
+		for _, g := range i.Groups {
+			if !strings.HasPrefix(g.Reference, i.Instance) {
+				t.Errorf("%s %s matched to %q, another bus's clock", i.Instance, g.Name, g.Reference)
+			}
+		}
 	}
 }
