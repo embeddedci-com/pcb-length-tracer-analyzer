@@ -6,4 +6,4 @@ a Qt window from a URL scheme answered in this process. Nothing listens on a
 socket.
 """
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
