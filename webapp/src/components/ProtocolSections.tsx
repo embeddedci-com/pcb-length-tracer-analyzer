@@ -33,7 +33,13 @@ export interface ProtocolStatus {
 /** The one-line state of a protocol, for its header. */
 export function interfaceStatus(i: DetectedInterface): ProtocolStatus {
   const out = (i.groups ?? []).reduce((n, g) => n + g.out_of_tolerance, 0)
-  const pairsOut = (i.pair_skew ?? []).filter((p) => p.routed && !p.in_tolerance).length
+  // A pair that is out gets a group of its own ("pair RJ451_D4"), so it is
+  // already in the count above. Counting it again as a pair said "3 out of
+  // tolerance, 3 pairs out" for three pairs.
+  const asGroup = new Set((i.groups ?? []).map((g) => g.name))
+  const pairsOut = (i.pair_skew ?? []).filter(
+    (p) => p.routed && !p.in_tolerance && !asGroup.has(`pair ${p.name}`),
+  ).length
   if (out > 0 || pairsOut > 0) {
     const bits = []
     if (out > 0) bits.push(`${out} out of tolerance`)
@@ -278,9 +284,13 @@ function GroupCard({ group }: { group: GroupSkewInfo }) {
             </Table>
           </Table.ScrollContainer>
         )}
+        {/* No rows is not evidence of no copper: say only what the counts
+            show. It used to claim nothing was routed, a line under a length. */}
         {rows.length === 0 && (
           <Text size="xs" c="dimmed">
-            {group.members ?? 0} nets, none of them routed end to end yet.
+            {(group.members ?? 0) > 0 && group.unroutable >= (group.members ?? 0)
+              ? `${group.members} nets, none of them routed end to end yet.`
+              : `${group.members ?? 0} nets.`}
           </Text>
         )}
       </Stack>

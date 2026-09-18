@@ -285,9 +285,23 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
   // protocols use: the planner produces groups rather than a DetectedInterface
   // the status helper can read.
   const ddrOut = (analysis.groups ?? []).reduce((n, g) => n + (g.out_of_tolerance ?? 0), 0)
-  const ddrStatus = ddrOut > 0
-    ? { text: `${ddrOut} out of tolerance`, tone: 'orange', short: `${ddrOut} out` }
-    : { text: 'every matched net is within tolerance', tone: 'teal', short: 'ok' }
+  // The checks across groups live in this card too, so a failed one belongs
+  // in its header: a card saying "within tolerance" over a failed strobe to
+  // clock check would be wrong about its own contents.
+  const ddrChecksOut = (analysis.checks ?? []).filter((c) => !c.ok).length
+  const ddrStatus =
+    ddrOut > 0 || ddrChecksOut > 0
+      ? {
+          text: [
+            ddrOut > 0 ? `${ddrOut} out of tolerance` : '',
+            ddrChecksOut > 0 ? `${ddrChecksOut} check${ddrChecksOut === 1 ? '' : 's'} across groups outside the limit` : '',
+          ]
+            .filter(Boolean)
+            .join(', '),
+          tone: 'orange',
+          short: `${ddrOut + ddrChecksOut} out`,
+        }
+      : { text: 'every matched net is within tolerance', tone: 'teal', short: 'ok' }
   const protocols = protocolEntries(analysis.interfaces ?? [], hasDDR ? ddrStatus : null)
 
   // The whole board in the shape the DDR half has: every ticked interface's
@@ -482,12 +496,15 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
                         }
                       />
                     )}
+                    {/* Both are DDR's alone: strobe against clock and chip
+                        against chip, then AN5724's layers. Outside this card
+                        they read as if they were about the whole board. */}
+                    <ChecksCard checks={analysis.checks} />
+                    <LayerChecks findings={analysis.layers} />
                   </Stack>
                 ) : null
               }
             />
-            <ChecksCard checks={analysis.checks} />
-            <LayerChecks findings={analysis.layers} />
             {/* What needs doing comes after what was found. Having parsed a board, the
                 first thing to check is whether it was read right -- the interfaces it
                 recognised and the groups it matched -- and only then what to do about them. */}

@@ -496,11 +496,27 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 					NeedsReroute: reroute, pathTracks: pathOf(short),
 				}},
 			})
+			long := map[bool]string{true: p.N, false: p.P}[short == p.P]
 			d.Groups = append(d.Groups, GroupSkewInfo{
-				Name: group, Reference: label(map[bool]string{true: p.N, false: p.P}[short == p.P]),
+				Name: group, Reference: label(long),
 				ReferenceMM: length + need, SpreadMM: need, LimitMM: p.LimitMM,
 				OutOfTol: 1, Members: 2, TargetMM: length + need, NeedMM: need,
 				Why: "the two halves of a differential pair are matched to each other; the shorter is brought up to the longer",
+				// Both halves, the way any other group lists its members. A
+				// pair group used to carry only its counts, and the page, with
+				// no rows to show, said the pair was not routed while printing
+				// its length a line above.
+				Rows: []MemberInfo{
+					{
+						Net: short, Label: label(short), Routed: true, LengthMM: length,
+						Parts: joinedParts(e, short), DeviationMM: -need, NeedMM: need,
+						NeedsReroute: reroute, Through: e.Joined(short).Through,
+					},
+					{
+						Net: long, Label: label(long), Role: "reference", Routed: true, LengthMM: length + need,
+						Parts: joinedParts(e, long), InTolerance: true, Through: e.Joined(long).Through,
+					},
+				},
 			})
 			d.TotalNeedMM += need
 		}

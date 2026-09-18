@@ -100,3 +100,41 @@ def test_the_footer_links_to_embeddedci(qapp):
 
     assert any("embeddedci.com" in l.text() for l in p.findChildren(QLabel))
     p.close()
+
+
+# The panel opens with one line, "Reading the board", and the answer wraps to
+# two or three. A window already on screen was left at one line's height with
+# the rest cut off: Qt recomputes layouts lazily, and does not carry a wrapped
+# label's height up through the frame. Whatever the text says, all of it has to
+# be inside the window.
+def test_the_window_grows_to_show_a_wrapped_answer(qapp):
+    selection = []
+    p = make(selection, lookup=lambda nets: {"nets": [dict(ROW, label="emmc_cmd", group="command and data to clock",
+                                                          interface="SD/eMMC (EMMC)")] if nets else []})
+    p.start()
+    assert spin(lambda: "Click a track" in p._body.text())
+    before = p.height()
+
+    selection.append("/emmc/emmc_cmd")
+    assert spin(lambda: "emmc_cmd" in p._body.text())
+    body = p._body
+
+    # The label is as tall as its own text needs at the width it has...
+    assert body.height() >= body.heightForWidth(body.width()), (body.height(), body.heightForWidth(body.width()))
+    # ...and the whole of it is inside the window, not just its first line.
+    bottom = body.mapTo(p, body.rect().bottomLeft()).y()
+    assert bottom <= p.height(), (bottom, p.height())
+    assert p.height() > before
+    p.close()
+
+
+def test_it_shrinks_again_for_a_shorter_message(qapp):
+    selection = ["/emmc/emmc_cmd"]
+    p = make(selection, lookup=lambda nets: {"nets": [dict(ROW, label="a very long net name " * 6)] if nets else []})
+    p.start()
+    assert spin(lambda: "very long" in p._body.text())
+    tall = p.height()
+    selection.clear()
+    assert spin(lambda: "Click a track" in p._body.text())
+    assert p.height() < tall
+    p.close()

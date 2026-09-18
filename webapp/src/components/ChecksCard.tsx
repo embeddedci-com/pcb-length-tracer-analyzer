@@ -57,9 +57,11 @@ export function ChecksCard({ checks }: { checks?: CheckInfo[] }) {
                     {c.kind === 'chip-delta' ? `≤ ${mm(c.limit_mm)}` : `±${mm(c.limit_mm)}`}
                   </Text>
                 </Table.Td>
-                <Table.Td>
+                {/* Kept whole: inside the DDR section the table is narrower,
+                    and this column was being squeezed to "o…". */}
+                <Table.Td style={NOWRAP}>
                   {c.ok ? (
-                    <Badge size="xs" variant="light" color="green">
+                    <Badge size="xs" variant="light" color="green" style={{ minWidth: 'max-content' }}>
                       ok
                     </Badge>
                   ) : (
@@ -73,7 +75,7 @@ export function ChecksCard({ checks }: { checks?: CheckInfo[] }) {
                       w={320}
                       withArrow
                     >
-                      <Badge size="xs" variant="light" color="red">
+                      <Badge size="xs" variant="light" color="red" style={{ minWidth: 'max-content' }}>
                         outside
                       </Badge>
                     </Tooltip>

@@ -231,3 +231,57 @@ describe('ProtocolSections', () => {
     expect(interfaceStatus(iface({ groups: [], unroutable: 12 })).text).toMatch(/12 of 12/)
   })
 })
+
+// Three pairs out of tolerance each get a group of their own, and are also in
+// pair_skew. The header said "3 out of tolerance, 3 pairs out" for three pairs.
+describe('a protocol made of bare pairs', () => {
+  const pair = (name: string) => ({
+    name,
+    p: `/eth/${name}_P`,
+    n: `/eth/${name}_N`,
+    skew_mm: 0.5,
+    limit_mm: 0.127,
+    routed: true,
+    in_tolerance: false,
+  })
+  const pairGroup = (name: string) => ({
+    name: `pair ${name}`,
+    reference: `${name}_P`,
+    reference_mm: 12.451,
+    spread_mm: 0.524,
+    limit_mm: 0.127,
+    out_of_tolerance: 1,
+    unroutable: 0,
+    members: 2,
+  })
+
+  it('counts each pair that is out once', () => {
+    const i = iface({
+      groups: ['RJ451_D1', 'RJ451_D3', 'RJ451_D4'].map(pairGroup),
+      pair_skew: ['RJ451_D1', 'RJ451_D3', 'RJ451_D4', 'RJ451_D2'].map((n) =>
+        n === 'RJ451_D2' ? { ...pair(n), in_tolerance: true } : pair(n),
+      ),
+    })
+    expect(interfaceStatus(i).text).toBe('3 out of tolerance')
+  })
+
+  // A group can arrive with no member rows. That says nothing about copper,
+  // and the card used to claim nothing was routed a line under its length.
+  it('does not call a measured pair unrouted when it has no rows', () => {
+    renderUI(
+      <ProtocolSections interfaces={[iface({ groups: [pairGroup('RJ451_D4')] })]} open={['Ethernet RGMII (ETH1)']} />,
+    )
+    expect(screen.queryByText(/none of them routed/)).not.toBeInTheDocument()
+    expect(screen.getByText('2 nets.')).toBeInTheDocument()
+  })
+
+  it('still says so when the group really is unrouted', () => {
+    renderUI(
+      <ProtocolSections
+        interfaces={[iface({ groups: [{ ...pairGroup('RJ451_D4'), unroutable: 2, reference_mm: 0, spread_mm: 0 }] })]}
+        open={['Ethernet RGMII (ETH1)']}
+      />,
+    )
+    expect(screen.getByText(/2 nets, none of them routed end to end yet/)).toBeInTheDocument()
+  })
+})

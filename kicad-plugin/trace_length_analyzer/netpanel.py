@@ -26,6 +26,9 @@ POLL_MS = 300
 # Closed after this long with nothing new to show.
 IDLE_CLOSE_MS = 90_000
 HOMEPAGE = "https://embeddedci.com/tools/pcb-trace-length-analyzer"
+# The text's width: wide enough for one net's line to read as a sentence,
+# narrow enough that the panel does not cover the board it is about.
+BODY_MIN_WIDTH, BODY_MAX_WIDTH = 420, 620
 
 
 class _Bridge(QObject):
@@ -95,9 +98,8 @@ class NetPanel(QWidget):
         self._body = QLabel("Reading the board from KiCad…")
         self._body.setWordWrap(True)
         self._body.setTextFormat(Qt.TextFormat.RichText)
-        self._body.setMinimumWidth(420)
-        self._body.setMaximumWidth(620)
         box.addWidget(self._body)
+        self._fit()
 
         foot = QLabel(f'<a href="{HOMEPAGE}">Plugin by embeddedci.com</a>')
         foot.setTextFormat(Qt.TextFormat.RichText)
@@ -182,7 +184,49 @@ class NetPanel(QWidget):
 
     def _say(self, html: str) -> None:
         self._body.setText(html)
+        self._fit()
+
+    def _fit(self) -> None:
+        """Size the text, then the window around it.
+
+        adjustSize() alone does not grow a window that is already showing to
+        fit wrapped text: the panel opens with a one-line "Reading the board"
+        and the answer wraps to two or three lines, and it was left at one
+        line's height with the rest cut off. Qt does not carry a wrapped
+        label's height-for-width up through the frame's layout, so it is done
+        here by hand: settle the label's width, ask how tall the text is at
+        that width, and fix both before the window is sized.
+        """
+        b = self._body
+        b.setMinimumSize(0, 0)
+        b.setMaximumSize(BODY_MAX_WIDTH, 16777215)
+        width = min(max(b.sizeHint().width(), BODY_MIN_WIDTH), BODY_MAX_WIDTH)
+        b.setFixedSize(width, b.heightForWidth(width))
+        # Qt recomputes a layout lazily, on the next pass through the event
+        # loop, so the window's size hint is still the old text's here. Make
+        # both layouts -- the frame's, then the window's -- recompute now, or
+        # adjustSize() sizes the window for what it used to say.
+        for layout in (b.parentWidget().layout(), self.layout()):
+            layout.invalidate()
+            layout.activate()
         self.adjustSize()
+        if self.isVisible():
+            self._keep_on_screen()
+
+    def _keep_on_screen(self) -> None:
+        """Nudge the panel back inside its screen after it has grown.
+
+        It is placed beside the pointer when it opens and then grows as the
+        answer arrives, which can take its bottom edge off the screen. It is
+        moved only as far as that needs: sent back to wherever the pointer is
+        now, it would jump away from the track the user just clicked.
+        """
+        screen = QGuiApplication.screenAt(self.geometry().center()) or QGuiApplication.primaryScreen()
+        area = screen.availableGeometry()
+        x = min(max(self.x(), area.left() + 8), area.right() - self.width() - 8)
+        y = min(max(self.y(), area.top() + 8), area.bottom() - self.height() - 8)
+        if (x, y) != (self.x(), self.y()):
+            self.move(x, y)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self._poll.stop()

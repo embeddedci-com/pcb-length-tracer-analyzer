@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"math"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -416,5 +417,49 @@ func TestTheMemoryStoreDropsTheOldestBoardsToStayUnderItsCap(t *testing.T) {
 	}
 	if _, err := m.Result(t.Context(), "new"); err != nil {
 		t.Error("the session being written to was evicted to make room for itself")
+	}
+}
+
+// A pair out of tolerance is shown as a group of its own, and that group has to
+// list both halves like any other. It used to carry only its counts, and the
+// page, finding no rows, said the pair was not routed right under its length.
+func TestAPairGroupListsBothHalves(t *testing.T) {
+	h := newHarness(t)
+	up := decode[SessionResponse](t, h.uploadBytes("usb.kicad_pcb", skewedUSB()))
+
+	var usb *DetectedInterface
+	for i := range up.Analysis.Interfaces {
+		if up.Analysis.Interfaces[i].Kind == "usb2" {
+			usb = &up.Analysis.Interfaces[i]
+		}
+	}
+	if usb == nil || len(usb.Groups) != 1 {
+		t.Fatalf("want one pair group, got %+v", usb)
+	}
+	g := usb.Groups[0]
+	if len(g.Rows) != 2 {
+		t.Fatalf("pair group has %d rows, want both halves: %+v", len(g.Rows), g.Rows)
+	}
+	var ref, out *MemberInfo
+	for i := range g.Rows {
+		r := &g.Rows[i]
+		if !r.Routed {
+			t.Errorf("%s is routed, and the row says it is not", r.Net)
+		}
+		if r.Role == "reference" {
+			ref = r
+		} else {
+			out = r
+		}
+	}
+	if ref == nil || ref.Net != "/USB_D+" || !ref.InTolerance {
+		t.Errorf("reference row %+v, want the longer half D+", ref)
+	}
+	if out == nil || out.Net != "/USB_D-" || out.InTolerance || out.NeedMM <= 0 {
+		t.Errorf("out row %+v, want the shorter half D- asking for length", out)
+	}
+	// The row's figures are the group's.
+	if ref != nil && math.Abs(ref.LengthMM-g.ReferenceMM) > 1e-9 {
+		t.Errorf("reference row %.3f mm, group says %.3f", ref.LengthMM, g.ReferenceMM)
 	}
 }
