@@ -35,7 +35,13 @@ import {
 } from '../lib/analyzerApi'
 import { BoardSummary } from '../components/BoardSummary'
 import { GroupTable } from '../components/GroupTable'
-import { PairRows, ProtocolSections } from '../components/ProtocolSections'
+import {
+  PairRows,
+  ProtocolNav,
+  ProtocolSections,
+  protocolEntries,
+  useProtocolSections,
+} from '../components/ProtocolSections'
 import { ParameterForm } from '../components/ParameterForm'
 import { CandidatePicker } from '../components/CandidatePicker'
 import { ApplyResult } from '../components/ApplyResult'
@@ -116,6 +122,9 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
   // read, then everything with something to fix -- the useful default, and one
   // the user can narrow rather than having to build up from nothing.
   const [pickedRaw, setPicked] = useState<string[] | null>(null)
+  // Which protocol sections are open. Here rather than in the sections because
+  // the list that opens them sits near the top of the page, well above them.
+  const sections = useProtocolSections()
 
   const session = useQuery({
     queryKey: ['analyzer', 'session', sessionId],
@@ -277,8 +286,9 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
   // the status helper can read.
   const ddrOut = (analysis.groups ?? []).reduce((n, g) => n + (g.out_of_tolerance ?? 0), 0)
   const ddrStatus = ddrOut > 0
-    ? { text: `${ddrOut} out of tolerance`, tone: 'orange' }
-    : { text: 'every matched net is within tolerance', tone: 'teal' }
+    ? { text: `${ddrOut} out of tolerance`, tone: 'orange', short: `${ddrOut} out` }
+    : { text: 'every matched net is within tolerance', tone: 'teal', short: 'ok' }
+  const protocols = protocolEntries(analysis.interfaces ?? [], hasDDR ? ddrStatus : null)
 
   // The whole board in the shape the DDR half has: every ticked interface's
   // short nets are candidates and its groups are groups, so the picker, the
@@ -389,6 +399,15 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
               hint="Tolerances, clock offset and package lengths."
             />
             <PackageWarning status={pkgStatus} onFix={() => setStep(1)} />
+            {/* The way into the measurements, which are further down and all
+                folded: one link per protocol, each saying where it stands. */}
+            <ProtocolNav
+              entries={protocols}
+              open={sections.open}
+              onJump={sections.jump}
+              onOpenAll={() => sections.setOpen(protocols.map((p) => p.id))}
+              onCloseAll={() => sections.setOpen([])}
+            />
             <BoardSummary analysis={analysis} />
             {(analysis.notes?.length ?? 0) > 0 && (
               <Alert color="blue" variant="light" title="About this board">
@@ -423,6 +442,9 @@ export function BoardPage({ api }: { api: AnalyzerApi }) {
             <ProtocolSections
               interfaces={analysis.interfaces ?? []}
               ddrStatus={ddrStatus}
+              open={sections.open}
+              onOpenChange={sections.setOpen}
+              withNav
               ddr={
                 hasDDR ? (
                   <Stack gap="md">

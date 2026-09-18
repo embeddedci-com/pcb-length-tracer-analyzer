@@ -176,3 +176,65 @@ func TestJoinedNeedsAPassiveNotJustTwoPads(t *testing.T) {
 		}
 	}
 }
+
+// A resistor across a pair terminates it; it is not something a signal runs
+// through. The demo board has a 100 ohm R17 bridging DDR_CLK_P and DDR_CLK_N,
+// and walking it reported a clock of 56.972 mm: both halves added together.
+func TestJoinedDoesNotWalkADifferentialTerminator(t *testing.T) {
+	b := loadBoard(t)
+	e := New(b)
+	for _, net := range []string{"/ddr4/DDR_CLK_P", "/ddr4/DDR_CLK_N"} {
+		j, m := e.Joined(net), e.Measure(net)
+		if j.Split() {
+			t.Errorf("%s walked a terminator: through %v into %v", net, j.Through, j.Segments[1:])
+		}
+		if j.LengthMM != m.Longest.Length {
+			t.Errorf("%s: joined %.3f mm, plain %.3f mm", net, j.LengthMM, m.Longest.Length)
+		}
+	}
+
+	for _, c := range []struct {
+		a, b string
+		want bool
+	}{
+		{"/ddr4/DDR_CLK_P", "/ddr4/DDR_CLK_N", true},
+		{"USB_D+", "USB_D-", true},
+		{"/ddr4/DDR_DQS0_T", "/ddr4/DDR_DQS0_C", true},
+		// Two different signals that happen to share a suffix: a 0 ohm link
+		// between the + halves of two clocks is a series part, not a pair.
+		{"/expansion/PCIE.CLKIN+", "/expansion/100MCLK0+", false},
+		{"/eth/ETH1.RXD0", "Net-(U9-RXD0_RXDLY)", false},
+		{"/eth/TX_CLK", "/eth/RX_CLK", false},
+	} {
+		if got := sameDiffPair(c.a, c.b); got != c.want {
+			t.Errorf("sameDiffPair(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+// The parts a signal really does run through on the demo board, by protocol.
+// This is the check that the guards let the true ones through while stopping
+// the terminators and the decoupling capacitors.
+func TestJoinedFindsTheRealSeriesPartsOnTheDemoBoard(t *testing.T) {
+	e := New(loadBoard(t))
+	for _, c := range []struct {
+		net     string
+		through string
+	}{
+		{"/ethernet/ETH1.GTX_CLK", "R86"},  // RGMII, 22 ohm damping
+		{"/MP257/SDMMC1_CK", "R103"},       // an SD clock, 22 ohm
+		{"/expansion/PCIE.CLKIN+", "R114"}, // a 0 ohm link on a reference clock
+	} {
+		j := e.Joined(c.net)
+		if !j.Split() || !slices.Contains(j.Through, c.through) {
+			t.Errorf("%s: through %v, want %s", c.net, j.Through, c.through)
+		}
+	}
+	// And nothing on DDR, whose only two-pad parts across its nets are the
+	// pair terminators.
+	for _, n := range ddrNets(loadBoard(t)) {
+		if j := e.Joined(n); j.Split() {
+			t.Errorf("%s walked into %v through %v", n, j.Segments[1:], j.Through)
+		}
+	}
+}

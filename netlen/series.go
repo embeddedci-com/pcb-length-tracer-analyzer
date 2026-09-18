@@ -34,6 +34,40 @@ var seriesPart = regexp.MustCompile(`^(R|L|FB|C)[0-9]`)
 // powerNet matches the names boards give rails. Case is normalised first.
 var powerNet = regexp.MustCompile(`^(GND|AGND|DGND|PGND|VSS[A-Z0-9_]*|VCC[A-Z0-9_]*|VDD[A-Z0-9_]*|VBAT|VBUS|VREF[A-Z0-9_]*|VTT|[+-]?[0-9]+V[0-9]*|[0-9]+V[0-9]+)$`)
 
+// diffSuffix are the endings that make two nets the halves of one pair, in the
+// order they pair up: _P with _N, + with -, _T with _C.
+var diffSuffix = [][2]string{{"_P", "_N"}, {"+", "-"}, {"_T", "_C"}, {"P", "N"}}
+
+// sameDiffPair reports whether two nets are the two halves of one differential
+// pair.
+//
+// A resistor across a pair is a terminator, not something a signal runs
+// through: the 100 ohms bridging DDR_CLK_P and DDR_CLK_N sits at the far end of
+// both, and walking it reports a clock twice its real length. A series part has
+// a different signal on each side; a terminator has the same signal twice.
+func sameDiffPair(a, b string) bool {
+	x, y := strings.ToUpper(leafOf(a)), strings.ToUpper(leafOf(b))
+	if x == y {
+		return false
+	}
+	for _, s := range diffSuffix {
+		for _, pair := range [][2]string{{s[0], s[1]}, {s[1], s[0]}} {
+			if strings.HasSuffix(x, pair[0]) && strings.HasSuffix(y, pair[1]) &&
+				strings.TrimSuffix(x, pair[0]) == strings.TrimSuffix(y, pair[1]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func leafOf(net string) string {
+	if i := strings.LastIndexByte(net, '/'); i >= 0 {
+		return net[i+1:]
+	}
+	return net
+}
+
 // maxSeriesPads is how many pads a net may have and still be taken for one
 // signal's segment. A rail has dozens; a segment between a driver and a series
 // part has two, or a few more where the schematic also taps it.
@@ -44,10 +78,7 @@ const maxSeriesPads = 6
 const maxSeriesHops = 4
 
 func isPowerName(net string) bool {
-	leaf := net
-	if i := strings.LastIndexByte(leaf, '/'); i >= 0 {
-		leaf = leaf[i+1:]
-	}
+	leaf := leafOf(net)
 	if i := strings.LastIndexByte(leaf, '.'); i >= 0 {
 		leaf = leaf[i+1:]
 	}
@@ -80,7 +111,7 @@ func (e *Engine) seriesLinks(net string) []SeriesLink {
 		default:
 			continue
 		}
-		if isPowerName(far) || len(e.b.PadsOfNet(far)) > maxSeriesPads {
+		if isPowerName(far) || len(e.b.PadsOfNet(far)) > maxSeriesPads || sameDiffPair(net, far) {
 			continue
 		}
 		out = append(out, SeriesLink{Through: f.Ref, Net: far})

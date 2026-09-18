@@ -44,12 +44,20 @@ def _includes(parts: Optional[Dict[str, Any]]) -> str:
     return f" (incl. {', '.join(extra)})" if extra else ""
 
 
+def _leaf(net: str) -> str:
+    return net.rsplit("/", 1)[-1] or net
+
+
 def format_row(row: Dict[str, Any]) -> str:
     """One net's standing in a sentence: what it is, and what to do about it."""
     # DDR groups already carry their leg in the name ("address/command U3->U4").
     leg = row.get("leg") or ""
     where = row["group"] + (f" {leg}" if leg and leg not in row["group"] else "")
     head = f"{row['label']} ({row['interface']} / {where})"
+    # The net clicked continues this signal through a series part.
+    if row.get("asked"):
+        parts = ", ".join(row.get("through") or [])
+        head = f"{_leaf(row['asked'])} is {row['label']}{f' past {parts}' if parts else ''} ({row['interface']} / {where})"
     if not row.get("routed"):
         return f"{head}: not routed"
     length = f"{row['length_mm']:.3f} mm{_includes(row.get('parts'))}"

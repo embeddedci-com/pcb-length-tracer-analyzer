@@ -133,3 +133,13 @@ def test_rules_are_kept_per_board(tmp_path):
 def test_dev_and_release_share_the_rules():
     assert shared_identifier("com.embeddedci.pcb-trace-length-analyzer.dev") == "com.embeddedci.pcb-trace-length-analyzer"
     assert shared_identifier("com.embeddedci.pcb-trace-length-analyzer") == "com.embeddedci.pcb-trace-length-analyzer"
+
+
+def test_format_row_names_the_net_clicked_past_a_series_part():
+    row = {
+        "label": "RXD0", "interface": "ETH1", "group": "receive", "routed": True,
+        "length_mm": 30.0, "target_mm": 30.0, "tolerance_mm": 0.5,
+        "deviation_mm": 0.0, "in_tolerance": True, "need_mm": 0,
+        "asked": "Net-(U9-RXD0_RXDLY)", "through": ["R80"],
+    }
+    assert format_row(row).startswith("Net-(U9-RXD0_RXDLY) is RXD0 past R80 (ETH1 / receive)")

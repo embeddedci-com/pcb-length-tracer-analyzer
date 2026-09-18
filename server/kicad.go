@@ -43,6 +43,12 @@ type NetStatus struct {
 	// but not tuned.
 	Reference bool `json:"reference,omitempty"`
 
+	// Asked is set when the net looked up is not this row's net but continues
+	// it through a series part: the far side of an AC-coupling cap or a
+	// damping resistor. Through names the parts between the two.
+	Asked   string   `json:"asked,omitempty"`
+	Through []string `json:"through,omitempty"`
+
 	Routed   bool    `json:"routed"`
 	LengthMM float64 `json:"length_mm"`
 	// Parts is LengthMM taken apart: track, vias, pad entry, package.
@@ -167,6 +173,20 @@ func lookupNets(rows []NetStatus, b *board.Board, e *netlen.Engine, names []stri
 		if found {
 			continue
 		}
+		// The far side of a series part. A PCIe lane is two nets joined by
+		// its AC-coupling caps, and the one clicked is as likely to be the
+		// connector side as the side the interface is named on. The row is the
+		// signal's, measured across both.
+		if boardNets[net] {
+			if hits := continuing(rows, e, net); len(hits) > 0 {
+				for _, s := range hits {
+					if keep(s) {
+						resp.Nets = append(resp.Nets, s)
+					}
+				}
+				continue
+			}
+		}
 		u := UnmatchedNet{Net: net, Label: label(net), Exists: boardNets[net]}
 		if u.Exists {
 			if m := e.Measure(net); m != nil {
@@ -177,6 +197,31 @@ func lookupNets(rows []NetStatus, b *board.Board, e *netlen.Engine, names []stri
 	}
 	sortRows(resp.Nets)
 	return resp
+}
+
+// continuing returns the rows whose signal runs on through series parts onto
+// net, each marked with what was asked and the parts in between.
+func continuing(rows []NetStatus, e *netlen.Engine, net string) []NetStatus {
+	var out []NetStatus
+	joined := map[string]*netlen.Joined{}
+	for _, s := range rows {
+		j, ok := joined[s.Net]
+		if !ok {
+			j = e.Joined(s.Net)
+			joined[s.Net] = j
+		}
+		for k, seg := range j.Segments {
+			if k == 0 || seg != net {
+				continue
+			}
+			// Segments[k] was reached across Through[k-1]; on a chain the
+			// parts before it are the ones in between.
+			s.Asked = net
+			s.Through = append([]string(nil), j.Through[:k]...)
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // sortRows puts the worst first: what is out of tolerance by the most, then

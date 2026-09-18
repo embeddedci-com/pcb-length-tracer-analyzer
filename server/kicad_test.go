@@ -105,6 +105,32 @@ func TestNetsLookupByFullNameLabelAndUnknown(t *testing.T) {
 	}
 }
 
+// Clicking either half of a pair, or the far side of a series resistor, finds
+// the signal. MIPI groups hold only each lane's P line, and the demo board's
+// RGMII runs through 22R parts onto nets named after the PHY's pins; before
+// this both came back as "not in any length-matched group".
+func TestNetsLookupFindsThePairsOtherHalfAndTheFarSideOfASeriesPart(t *testing.T) {
+	h := newHarness(t)
+	first := decode[SessionResponse](t, h.upload(true, true))
+	look := func(name string) NetsResponse {
+		return decode[NetsResponse](t, h.do("GET", netsURL(first.Session.ID, url.Values{"name": {name}}), nil, ""))
+	}
+
+	n := look("/MIPI/CSI.D0_N")
+	if len(n.Nets) != 1 || !n.Nets[0].Pair || n.Nets[0].Interface == "" {
+		t.Fatalf("the N half of a MIPI lane: %+v", n)
+	}
+
+	far := look("Net-(U9-RXD0_RXDLY)")
+	if len(far.Nets) != 1 {
+		t.Fatalf("the PHY side of RXD0: %+v", far)
+	}
+	s := far.Nets[0]
+	if s.Asked != "Net-(U9-RXD0_RXDLY)" || len(s.Through) != 1 || s.Through[0] != "R80" || s.Group != "receive" {
+		t.Errorf("past R80: %+v", s)
+	}
+}
+
 // A fly-by net is matched once per leg, and a lookup has to say so rather than
 // pick one.
 func TestNetsLookupReturnsEveryLegOfAFlyByNet(t *testing.T) {

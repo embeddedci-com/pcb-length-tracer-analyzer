@@ -443,6 +443,23 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 		// longer. Inside a group the group target does that already, the way
 		// the DDR planner handles a strobe, so it is not asked for twice.
 		for _, p := range a.Pairs {
+			// A group may hold only one half of a pair: MIPI matches each data
+			// lane's P line to the clock. The other half is still a net somebody
+			// clicks, and it is matched to its partner, so it gets that row --
+			// otherwise the lookup calls it "not in any length-matched group".
+			if grouped[p.P] != grouped[p.N] {
+				half, hmm, other, omm := p.N, p.NMM, p.P, p.PMM
+				if grouped[p.N] {
+					half, hmm, other, omm = p.P, p.PMM, p.N, p.NMM
+				}
+				d.netRows = append(d.netRows, judge(NetStatus{
+					Net: half, Label: label(half), Interface: i.Name,
+					Group: "pair " + proto.Leaf(p.Base) + " (to " + label(other) + ")", Pair: true,
+					Routed: p.Routed, LengthMM: hmm, Parts: joinedParts(e, half), TargetMM: omm,
+					ToleranceMM: p.LimitMM,
+				}))
+				continue
+			}
 			if grouped[p.P] || grouped[p.N] {
 				continue
 			}
@@ -453,7 +470,7 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 				d.netRows = append(d.netRows, judge(NetStatus{
 					Net: half.net, Label: label(half.net), Interface: i.Name,
 					Group: "pair " + proto.Leaf(p.Base), Pair: true,
-					Routed: p.Routed, LengthMM: half.length, Parts: routeParts(e, half.net), TargetMM: math.Max(p.PMM, p.NMM),
+					Routed: p.Routed, LengthMM: half.length, Parts: joinedParts(e, half.net), TargetMM: math.Max(p.PMM, p.NMM),
 					ToleranceMM: p.LimitMM,
 				}))
 			}
@@ -472,10 +489,10 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 			group := "pair " + proto.Leaf(p.Base)
 			d.Candidates = append(d.Candidates, MemberInfo{
 				Net: short, Label: label(short), Routed: true,
-				LengthMM: length, Parts: routeParts(e, short), DeviationMM: -need, NeedMM: need,
+				LengthMM: length, Parts: joinedParts(e, short), DeviationMM: -need, NeedMM: need,
 				NeedsReroute: reroute, pathTracks: pathOf(short),
 				Legs: []CandidateLeg{{
-					Group: group, LengthMM: length, Parts: routeParts(e, short), NeedMM: need,
+					Group: group, LengthMM: length, Parts: joinedParts(e, short), NeedMM: need,
 					NeedsReroute: reroute, pathTracks: pathOf(short),
 				}},
 			})

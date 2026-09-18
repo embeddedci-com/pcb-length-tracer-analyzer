@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
-import { ProtocolSections, interfaceStatus } from './ProtocolSections'
+import {
+  ProtocolNav,
+  ProtocolSections,
+  interfaceStatus,
+  protocolEntries,
+  useProtocolSections,
+} from './ProtocolSections'
 import { renderUI, screen, waitFor, within } from '../testRender'
 import { HostProvider, type BoardHost } from '../lib/host'
 import type { DetectedInterface } from '../lib/analyzerApi'
@@ -71,25 +77,74 @@ describe('ProtocolSections', () => {
         ]}
       />,
     )
-    // DDR opens: it is the one with the most to read.
-    const ddr = screen.getByRole('button', { name: /DDR memory/ })
-    expect(ddr).toHaveAttribute('aria-expanded', 'true')
+    // Every one starts folded, DDR too: it alone runs to several screens.
+    for (const name of [/DDR memory/, /Ethernet RGMII/, /USB/]) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-expanded', 'false')
+    }
     expect(screen.getByText('40 out of tolerance')).toBeInTheDocument()
-
-    // The one with something out of tolerance opens too.
-    expect(screen.getByRole('button', { name: /Ethernet RGMII/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    )
-    // The one that is fine stays folded.
     const usb = screen.getByRole('button', { name: /USB/ })
-    expect(usb).toHaveAttribute('aria-expanded', 'false')
     await user.click(usb)
     expect(usb).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('opens the section picked in the list, and only that one', async () => {
+    const user = userEvent.setup()
+    const scrolled = vi.fn()
+    Element.prototype.scrollIntoView = scrolled
+    const interfaces = [
+      iface({}),
+      iface({ id: 'USB', name: 'USB', kind: 'usb2', groups: [], unroutable: 2, nets: 2, pair_skew: [{ name: 'D', p: 'D+', n: 'D-', skew_mm: 0, limit_mm: 0.5, routed: false, in_tolerance: false }] }),
+    ]
+    const ddrStatus = { text: 'every matched net is within tolerance', tone: 'teal', short: 'ok' }
+    function Page() {
+      const s = useProtocolSections()
+      const entries = protocolEntries(interfaces, ddrStatus)
+      return (
+        <>
+          <ProtocolNav
+            entries={entries}
+            open={s.open}
+            onJump={s.jump}
+            onOpenAll={() => s.setOpen(entries.map((e) => e.id))}
+            onCloseAll={() => s.setOpen([])}
+          />
+          <ProtocolSections
+            ddr={<div>the DDR tables</div>}
+            ddrStatus={ddrStatus}
+            interfaces={interfaces}
+            open={s.open}
+            onOpenChange={s.setOpen}
+            withNav
+          />
+        </>
+      )
+    }
+    renderUI(<Page />)
+    const nav = within(screen.getByText('Protocols').closest('.mantine-Card-root') as HTMLElement)
+    // Each says where it stands in a word or two.
+    expect(nav.getByRole('button', { name: /DDR memory\s*ok/ })).toBeInTheDocument()
+    expect(nav.getByRole('button', { name: /Ethernet RGMII \(ETH1\)\s*2 out/ })).toBeInTheDocument()
+    expect(nav.getByRole('button', { name: /USB\s*not routed/ })).toBeInTheDocument()
+
+    const section = (name: RegExp) =>
+      screen.getAllByRole('button', { name }).find((b) => b.hasAttribute('aria-expanded'))!
+    await user.click(section(/DDR memory/))
+    await user.click(nav.getByRole('button', { name: /Ethernet RGMII/ }))
+    expect(section(/Ethernet RGMII/)).toHaveAttribute('aria-expanded', 'true')
+    // The one open before is folded, so the page does not grow with each jump.
+    expect(section(/DDR memory/)).toHaveAttribute('aria-expanded', 'false')
+    await waitFor(() => expect(scrolled).toHaveBeenCalled())
+
+    await user.click(nav.getByRole('button', { name: /Open all/ }))
+    for (const n of [/DDR memory/, /Ethernet RGMII/, /USB/]) {
+      expect(section(n)).toHaveAttribute('aria-expanded', 'true')
+    }
+    await user.click(nav.getByRole('button', { name: /Close all/ }))
+    expect(section(/USB/)).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('shows what each group is matched to, and never the other direction', () => {
-    renderUI(<ProtocolSections interfaces={[iface({})]} />)
+    renderUI(<ProtocolSections interfaces={[iface({})]} open={['Ethernet RGMII (ETH1)']} />)
     const tx = screen.getByText('transmit').closest('div') as HTMLElement
     expect(within(tx).getByText(/matched to ETH1.GTX_CLK/)).toBeInTheDocument()
     expect(within(tx).getByText(/±10.000 mm/)).toBeInTheDocument()
@@ -107,6 +162,7 @@ describe('ProtocolSections', () => {
     ]
     renderUI(
       <ProtocolSections
+        open={['Ethernet RGMII (ETH1)']}
         interfaces={[
           iface({
             groups: [
@@ -137,6 +193,7 @@ describe('ProtocolSections', () => {
     renderUI(
       <HostProvider host={host}>
         <ProtocolSections
+          open={['Ethernet RGMII (ETH1)']}
           interfaces={[
             iface({
               groups: [
