@@ -209,7 +209,7 @@ export function ApplyResult({ result, sessionId, onDownload, onStartOver }: Appl
           )}
           <Text size="sm">
             The violation count should not have risen. See{' '}
-            <Anchor href="https://github.com/embeddedci-com/pcb-autorouter/blob/main/docs/design.md" target="_blank">
+            <Anchor href="https://github.com/embeddedci-com/pcb-trace-length-analyzer/blob/main/docs/design.md" target="_blank">
               the design notes
             </Anchor>{' '}
             for why the individual entries may be worded differently even when nothing moved.
