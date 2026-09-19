@@ -138,3 +138,13 @@ def test_it_shrinks_again_for_a_shorter_message(qapp):
     assert spin(lambda: "Click a track" in p._body.text())
     assert p.height() < tall
     p.close()
+
+
+def test_the_target_and_what_to_add_are_bold():
+    from trace_length_analyzer.netpanel import _emphasise
+
+    line = _emphasise("DQ3 (DDR / byte lane 0): 30.100 mm (too short), target 31.200 ±0.635, extend by 0.465 mm")
+    assert "<b>target 31.200 ±0.635</b>" in line
+    assert "<b>extend by 0.465 mm</b>" in line
+    assert "(too short)</b>" in line  # the verdict keeps its colour
+    assert "<b>shorten by 2.000 mm</b>" in _emphasise("X: 40.000 mm (too long), target 38.000 ±0.100, shorten by 2.000 mm")

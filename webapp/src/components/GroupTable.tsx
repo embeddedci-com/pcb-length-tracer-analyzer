@@ -110,6 +110,7 @@ function MemberRow({ m, tolerance }: { m: MemberInfo; tolerance: number }) {
           ff="monospace"
           style={NOWRAP}
           c={!m.in_tolerance && (m.need_mm > 0 || (m.excess_mm ?? 0) > 0) ? color : 'dimmed'}
+          fw={!m.in_tolerance && (m.need_mm > 0 || (m.excess_mm ?? 0) > 0) ? 700 : undefined}
         >
           {m.in_tolerance
             ? '—'

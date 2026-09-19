@@ -179,6 +179,33 @@ export function ProtocolNav({
 }
 
 /**
+ * The length a group's nets are matched to, big enough to find at a glance:
+ * "28.739 mm, DDR_CLK, tolerance ±0.635 mm". Every row is read against it.
+ */
+function MatchTarget({ group }: { group: GroupSkewInfo }) {
+  return (
+    <Group gap="lg" align="flex-end" wrap="wrap">
+      <div>
+        <Text size="xs" c="dimmed" tt="uppercase">
+          Match to
+        </Text>
+        <Text size="lg" fw={700} ff="monospace" style={NOWRAP}>
+          {group.reference_mm > 0 ? mm(group.reference_mm) : 'not routed'}
+        </Text>
+      </div>
+      <Text size="sm" style={{ flex: 1, minWidth: 180 }}>
+        <Text span fw={700}>
+          {group.reference || 'the longest net'}
+        </Text>
+        <Text span c="dimmed">
+          {group.limit_mm > 0 ? `, tolerance ±${mm(group.limit_mm)}` : ', no tolerance set'}
+        </Text>
+      </Text>
+    </Group>
+  )
+}
+
+/**
  * One group of a protocol, member by member.
  *
  * The same reading a DDR group gives: what each net measures, how far it is
@@ -199,12 +226,11 @@ function GroupCard({ group }: { group: GroupSkewInfo }) {
             <Title order={6} tt="capitalize">
               {group.name}
             </Title>
-            <Text size="xs" c="dimmed">
-              matched to {group.reference || 'its longest net'}
-              {group.reference_mm > 0 ? ` (${mm(group.reference_mm)})` : ''} · spread{' '}
-              {mm(group.spread_mm)} · tolerance{' '}
-              {group.limit_mm > 0 ? `±${mm(group.limit_mm)}` : 'none'}
-            </Text>
+            {rows.some((m) => m.routed) && (
+              <Text size="xs" c="dimmed">
+                spread {mm(group.spread_mm)}
+              </Text>
+            )}
             {group.why && (
               <Text size="xs" c="dimmed">
                 {group.why}
@@ -225,6 +251,11 @@ function GroupCard({ group }: { group: GroupSkewInfo }) {
           </Group>
         </Group>
 
+        {/* What every net here is matched to, before any row, the way a DDR
+            group shows its target: it is the one number the rows are read
+            against, and a dimmed clause in the heading hid it. */}
+        <MatchTarget group={group} />
+
         {rows.length > 0 && (
           <Table.ScrollContainer minWidth={460}>
             <Table verticalSpacing={4}>
@@ -239,11 +270,12 @@ function GroupCard({ group }: { group: GroupSkewInfo }) {
               <Table.Tbody>
                 {rows.map((m) => {
                   const bad = m.routed && !m.in_tolerance && m.role !== 'reference'
+                  const ref = m.role === 'reference'
                   return (
-                    <Table.Tr key={m.net}>
+                    <Table.Tr key={m.net} bg={ref ? 'var(--mantine-color-blue-light)' : undefined}>
                       <Table.Td>
                         <Group gap={6} wrap="nowrap">
-                          <Text size="sm" c={bad ? 'orange' : undefined}>
+                          <Text size="sm" c={bad ? 'orange' : undefined} fw={ref ? 700 : undefined}>
                             <NetName net={m.net}>{m.label}</NetName>
                           </Text>
                           {m.role === 'reference' && (
@@ -269,7 +301,13 @@ function GroupCard({ group }: { group: GroupSkewInfo }) {
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Text size="sm" ff="monospace" style={NOWRAP}>
+                        <Text
+                          size="sm"
+                          ff="monospace"
+                          style={NOWRAP}
+                          fw={bad ? 700 : undefined}
+                          c={bad ? 'orange' : undefined}
+                        >
                           {m.need_mm > 0
                             ? mm(m.need_mm)
                             : (m.excess_mm ?? 0) > 0

@@ -13,6 +13,7 @@ until it is closed or left alone for a while.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 
@@ -238,8 +239,14 @@ def _esc(s: Any) -> str:
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+# The numbers a user acts on: what the net has to reach, and how much to add or
+# take away to get there. Bold, so they are found without reading the sentence.
+_TARGET = re.compile(r"(target [0-9.]+ ±[0-9.]+|(?:extend|shorten) by [0-9.]+ mm)")
+
+
 def _emphasise(line: str) -> str:
-    """Make the verdict stand out in a line from format_lookup."""
+    """Make the verdict and the length to match stand out in a line from format_lookup."""
+    line = _TARGET.sub(r"<b>\1</b>", line)
     for word, colour in (("(too short)", "#c05a00"), ("(too long)", "#c02020"), ("within tolerance", "#2b8a3e")):
         if word in line:
             return line.replace(word, f"<b style='color:{colour}'>{word}</b>")

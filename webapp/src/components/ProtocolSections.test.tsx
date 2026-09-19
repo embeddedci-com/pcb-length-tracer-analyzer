@@ -145,12 +145,22 @@ describe('ProtocolSections', () => {
 
   it('shows what each group is matched to, and never the other direction', () => {
     renderUI(<ProtocolSections interfaces={[iface({})]} open={['Ethernet RGMII (ETH1)']} />)
-    const tx = screen.getByText('transmit').closest('div') as HTMLElement
-    expect(within(tx).getByText(/matched to ETH1.GTX_CLK/)).toBeInTheDocument()
-    expect(within(tx).getByText(/±10.000 mm/)).toBeInTheDocument()
-    const rx = screen.getByText('receive').closest('div') as HTMLElement
-    expect(within(rx).getByText(/matched to ETH1.RX_CLK/)).toBeInTheDocument()
+    // The card, not just its heading: the target sits below the heading.
+    const card = (name: string) => screen.getByText(name).closest('.mantine-Card-root') as HTMLElement
+    const tx = card('transmit')
+    expect(within(tx).getByText('ETH1.GTX_CLK')).toBeInTheDocument()
+    expect(within(tx).getByText(/tolerance ±10.000 mm/)).toBeInTheDocument()
+    const rx = card('receive')
+    expect(within(rx).getByText('ETH1.RX_CLK')).toBeInTheDocument()
     expect(within(rx).queryByText(/GTX_CLK/)).not.toBeInTheDocument()
+  })
+
+  it('shows the length to match to large and bold, not in the dimmed heading', () => {
+    renderUI(<ProtocolSections interfaces={[iface({})]} open={['Ethernet RGMII (ETH1)']} />)
+    const tx = screen.getByText('transmit').closest('.mantine-Card-root') as HTMLElement
+    expect(within(tx).getByText('Match to')).toBeInTheDocument()
+    const ref = within(tx).getByText('ETH1.GTX_CLK')
+    expect(ref).toHaveStyle({ fontWeight: '700' })
   })
 
   // A count of "2 out" with no way to see which two is not actionable.
