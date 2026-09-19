@@ -121,7 +121,8 @@ type WidthUseInfo struct {
 	LengthMM float64 `json:"length_mm"`
 }
 
-// ImpedanceInfo is the computed impedance against the family's usual target.
+// ImpedanceInfo is the computed impedance against the controller's target, or
+// the family's usual one where the controller's guide gives none.
 //
 // It is an estimate from closed-form models and the stackup in the board file.
 // A board that has to hold its impedance to a few percent needs the
@@ -133,6 +134,20 @@ type ImpedanceInfo struct {
 
 	TargetSingleEndedOhms float64 `json:"target_single_ended_ohms,omitempty"`
 	TargetDiffOhms        float64 `json:"target_diff_ohms,omitempty"`
+
+	// The top of a target range where the guide gives one ("80 to 90").
+	TargetSingleEndedMaxOhms float64 `json:"target_single_ended_max_ohms,omitempty"`
+	TargetDiffMaxOhms        float64 `json:"target_diff_max_ohms,omitempty"`
+
+	// Chip is the controller recognised on this interface, and ChipRef the
+	// footprint. ChipConnected is false when it has no pad on these nets and
+	// was taken as the only recognised chip on the board. TargetSource is its
+	// guide; empty means the guide gives no figure for this protocol and the
+	// targets are the family's usual ones.
+	Chip          string `json:"chip,omitempty"`
+	ChipRef       string `json:"chip_ref,omitempty"`
+	ChipConnected bool   `json:"chip_connected,omitempty"`
+	TargetSource  string `json:"target_source,omitempty"`
 
 	// Computed is false when there was no width to work from, in which case
 	// every other field here is meaningless and must not be shown. A zero
@@ -546,9 +561,14 @@ func detectInterfaces(b *board.Board, e *netlen.Engine, overrides []InterfaceOve
 		d.Impedance = ImpedanceInfo{
 			SingleEndedOhms: round1(z.SingleEnded.Ohms), DiffOhms: round1(z.Differential.Ohms),
 			TargetSingleEndedOhms: z.TargetSingleEnded, TargetDiffOhms: z.TargetDifferential,
-			Computed:   z.SingleEnded.Ohms > 0,
-			Microstrip: z.SingleEnded.Microstrip, InRange: z.SingleEnded.InRange,
+			TargetSingleEndedMaxOhms: z.TargetSingleEndedMax, TargetDiffMaxOhms: z.TargetDifferentialMax,
+			TargetSource: z.TargetSource,
+			Computed:     z.SingleEnded.Ohms > 0,
+			Microstrip:   z.SingleEnded.Microstrip, InRange: z.SingleEnded.InRange,
 			Layer: z.Layer, Note: z.SingleEnded.Note, TargetNote: z.TargetNote,
+		}
+		if z.Chip != nil {
+			d.Impedance.Chip, d.Impedance.ChipRef, d.Impedance.ChipConnected = z.Chip.Chip.Name, z.Chip.Ref, z.Chip.Connected
 		}
 		d.Assigned = assigned && o.Kind != ""
 		d.Evidence = i.Evidence

@@ -37,6 +37,21 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "intra_pair_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "STM32MP2",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 55,
+            "diff_ohms": 100,
+            "note": "For DDR3L, DDR4 and LPDDR4",
+            "source": "ST AN5724 Rev 4 (2025-12), section 6.3"
+          }
+        ]
+      }
     ]
   },
   {
@@ -66,6 +81,21 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "intra_pair_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "STM32MP15",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 55,
+            "diff_ohms": 100,
+            "note": "For DDR3, DDR3L, LPDDR2 and LPDDR3",
+            "source": "ST AN5122 Rev 3 (2019-02), section 5.3"
+          }
+        ]
+      }
     ]
   },
   {
@@ -94,6 +124,35 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3588",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 40,
+            "diff_ohms": 80,
+            "diff_max_ohms": 90,
+            "note": "Address and command may be 40 to 50 ohms on LPDDR5; CKE is 50 ohms on LPDDR4 and LPDDR4X",
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), tables 3-7 to 3-11"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), tables 3-13 and 3-14"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), table 3-18"
+          }
+        ]
+      }
     ]
   },
   {
@@ -122,6 +181,35 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3588",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 40,
+            "diff_ohms": 80,
+            "diff_max_ohms": 90,
+            "note": "Address and command may be 40 to 50 ohms on LPDDR5; CKE is 50 ohms on LPDDR4 and LPDDR4X",
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), tables 3-7 to 3-11"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), tables 3-13 and 3-14"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), table 3-18"
+          }
+        ]
+      }
     ]
   },
   {
@@ -150,6 +238,35 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3588",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 40,
+            "diff_ohms": 80,
+            "diff_max_ohms": 90,
+            "note": "Address and command may be 40 to 50 ohms on LPDDR5; CKE is 50 ohms on LPDDR4 and LPDDR4X",
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), tables 3-7 to 3-11"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), tables 3-13 and 3-14"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3588 Hardware Design Guide V1.0 (2022-01-06), table 3-18"
+          }
+        ]
+      }
     ]
   },
   {
@@ -178,6 +295,57 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3566/RK3568",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "note": "ECC control signals are 43 ohms in the region under the chip",
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), tables 20 to 34"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 1"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 2"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), tables 5 and 6"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "diff_ohms": 100,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 10"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), tables 11 to 13"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 19"
+          }
+        ]
+      }
     ]
   },
   {
@@ -206,6 +374,57 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3566/RK3568",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "note": "ECC control signals are 43 ohms in the region under the chip",
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), tables 20 to 34"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 1"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 2"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), tables 5 and 6"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "diff_ohms": 100,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 10"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), tables 11 to 13"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "RK3568 High Speed PCB Design Guide V1.0 (2021-04-12), table 19"
+          }
+        ]
+      }
     ]
   },
   {
@@ -233,6 +452,50 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3399",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), tables 4-1 to 4-8"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), tables 4-9 and 4-17"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 100,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-10"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-11"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-12"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "diff_ohms": 100,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-16"
+          }
+        ]
+      }
     ]
   },
   {
@@ -260,6 +523,50 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "RK3399",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), tables 4-1 to 4-8"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), tables 4-9 and 4-17"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 100,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-10"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-11"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-12"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "diff_ohms": 100,
+            "source": "RK3399 Design Guide V1.0 (2017-04-20), table 4-16"
+          }
+        ]
+      }
     ]
   },
   {
@@ -289,6 +596,126 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "i.MX 93",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock",
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 93 Hardware Design Guide Rev. 1 (2023-04-24), table 22"
+          }
+        ]
+      },
+      {
+        "chip": "i.MX 8M Plus",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock",
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8M Plus Hardware Developer's Guide Rev. 1 (2024-03-26), table 22"
+          }
+        ]
+      },
+      {
+        "chip": "i.MX 8M Nano"
+      }
     ]
   },
   {
@@ -319,6 +746,130 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "i.MX 8M Mini",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock",
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 85 ohms too",
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          }
+        ]
+      },
+      {
+        "chip": "i.MX 8M Quad/Dual",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock. LPDDR4 DQ and DMI are 42 ohms",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          }
+        ]
+      }
     ]
   },
   {
@@ -349,6 +900,130 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "i.MX 8M Mini",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock",
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 85 ohms too",
+            "source": "NXP i.MX 8M Mini Hardware Developer's Guide Rev. 1 (2019-08), table 32"
+          }
+        ]
+      },
+      {
+        "chip": "i.MX 8M Quad/Dual",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock. LPDDR4 DQ and DMI are 42 ohms",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          }
+        ]
+      }
     ]
   },
   {
@@ -378,6 +1053,72 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "i.MX 8M Quad/Dual",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 85,
+            "note": "85 ohms is for the strobes and the clock. LPDDR4 DQ and DMI are 42 ohms",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "rgmii",
+            "label": "Ethernet RGMII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "rmii",
+            "label": "Ethernet RMII/MII",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "sdmmc",
+            "label": "SD / eMMC",
+            "single_ended_ohms": 50,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "usb2",
+            "label": "USB 2.0",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "mipi",
+            "label": "MIPI D-PHY (CSI/DSI)",
+            "single_ended_ohms": 50,
+            "diff_ohms": 100,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "differential",
+            "label": "Differential pairs",
+            "diff_ohms": 100,
+            "note": "The guide's figure for differential signals it does not list by name, Ethernet among them",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "pcie",
+            "label": "PCI Express",
+            "diff_ohms": 85,
+            "note": "The reference clock is 100 ohms",
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          },
+          {
+            "kind": "usb-ss",
+            "label": "USB 3 SuperSpeed",
+            "diff_ohms": 90,
+            "source": "NXP i.MX 8MDQLQ Hardware Developer's Guide Rev. 2 (2019-06), table 25"
+          }
+        ]
+      }
     ]
   },
   {
@@ -405,6 +1146,11 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "i.MX 8M Nano"
+      }
     ]
   },
   {
@@ -435,6 +1181,20 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "AM62x",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 40,
+            "diff_ohms": 80,
+            "source": "TI SPRAD06C (2025-03), table 1-1"
+          }
+        ]
+      }
     ]
   },
   {
@@ -466,6 +1226,20 @@ export const PRESET_CATALOG: Preset[] = [
     "unstated": [
       "strobe_to_clock_mm",
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "AM64x/AM243x",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 40,
+            "diff_ohms": 80,
+            "source": "TI SPRACU1A (2021-06), table 1-1"
+          }
+        ]
+      }
     ]
   },
   {
@@ -494,6 +1268,11 @@ export const PRESET_CATALOG: Preset[] = [
     },
     "unstated": [
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "SAMA5D3, ATSAMA5D3"
+      }
     ]
   },
   {
@@ -523,6 +1302,22 @@ export const PRESET_CATALOG: Preset[] = [
     "unstated": [
       "strobe_to_clock_mm",
       "max_chip_delta_mm"
+    ],
+    "impedance": [
+      {
+        "chip": "SAMA5D2",
+        "targets": [
+          {
+            "kind": "ddr",
+            "label": "DDR memory",
+            "single_ended_ohms": 50,
+            "diff_ohms": 90,
+            "diff_max_ohms": 100,
+            "note": "The note says 90 or 100 ohms differential, for the board as a whole",
+            "source": "Microchip AN2814 Rev. A (2018-10), section 5.1.2"
+          }
+        ]
+      }
     ]
   }
 ]

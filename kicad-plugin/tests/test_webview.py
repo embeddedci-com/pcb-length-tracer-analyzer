@@ -212,3 +212,45 @@ def test_the_rules_button_is_above_the_report(page):
     assert text.index("Set the rules") < text.index("How lengths are measured")
     # And only once: it used to sit at the end of the step as well.
     assert text.count("Set the rules") == 1
+
+
+def _selection_host(shown):
+    from types import SimpleNamespace
+
+    from trace_length_analyzer.window import AnalyzerWindow
+
+    fake = SimpleNamespace(
+        _bridge=SimpleNamespace(done=SimpleNamespace(emit=lambda cb, outcome: cb(*outcome))),
+        _show_kicad=lambda: shown.append(True),
+    )
+    return lambda fut: AnalyzerWindow._then_show_kicad(fake, fut)
+
+
+def test_selecting_from_the_page_brings_kicad_forward():
+    shown = []
+    then = _selection_host(shown)
+    fut = Future()
+    assert then(fut) is fut  # the page still gets its answer
+    fut.set_result({"selected": 12})
+    assert shown == [True]
+
+
+@pytest.mark.parametrize("outcome", [{"selected": 0}, RuntimeError("no board")])
+def test_an_empty_or_failed_selection_leaves_the_window_in_front(outcome):
+    shown = []
+    fut = Future()
+    _selection_host(shown)(fut)
+    if isinstance(outcome, Exception):
+        fut.set_exception(outcome)
+    else:
+        fut.set_result(outcome)
+    assert shown == []
+
+
+def test_activating_kicad_never_raises_or_crashes():
+    # Run from pytest there is no KiCad above this process, so on macOS this
+    # exercises the Objective-C calls through the bundle-id fallback; a wrong
+    # signature there is a segfault, not an exception.
+    from trace_length_analyzer import macos
+
+    assert macos.activate_kicad() in (True, False)

@@ -25,7 +25,14 @@ function iface(over: Partial<DetectedInterface> = {}): DetectedInterface {
     actionable: true,
     unroutable: 0,
     geometry: { width_mm: 0.15, gap_mm: 0, measured: ['width'], needs_width: false, needs_gap: false },
-    impedance: { computed: true, microstrip: true, in_range: true, single_ended_ohms: 52, layer: 'F.Cu' },
+    impedance: {
+      computed: true,
+      microstrip: true,
+      in_range: true,
+      single_ended_ohms: 52,
+      target_single_ended_ohms: 50,
+      layer: 'F.Cu',
+    },
     ...over,
   }
 }
@@ -196,7 +203,7 @@ describe('InterfacePicker', () => {
             kind: 'usb2',
             pairs: 1,
             routed: 0,
-            impedance: { computed: false, microstrip: true, in_range: true },
+            impedance: { computed: false, microstrip: true, in_range: true, target_diff_ohms: 90 },
           }),
         ]}
         selected={[]}
@@ -205,6 +212,107 @@ describe('InterfacePicker', () => {
       />,
     )
     expect(screen.getByText(/usually drawn to 90 Ω differential/)).toBeInTheDocument()
+  })
+
+  it("holds DDR to the controller's own figure and names the guide", () => {
+    renderUI(
+      <InterfacePicker
+        interfaces={[
+          iface({
+            kind: 'ddr',
+            impedance: {
+              computed: true,
+              microstrip: false,
+              in_range: true,
+              single_ended_ohms: 54,
+              diff_ohms: 98,
+              target_single_ended_ohms: 55,
+              target_diff_ohms: 100,
+              chip: 'STM32MP2',
+              chip_ref: 'U1',
+              chip_connected: true,
+              target_source: 'ST AN5724 Rev 4 (2025-12), section 6.3',
+              layer: 'In1.Cu',
+            },
+          }),
+        ]}
+        selected={[]}
+        onChange={vi.fn()}
+        families={families}
+      />,
+    )
+    expect(screen.getByText('(STM32MP2 asks for 55 Ω)')).toBeInTheDocument()
+    expect(screen.getByText('(STM32MP2 asks for 100 Ω)')).toBeInTheDocument()
+    expect(screen.getByText(/From the STM32MP2 \(U1\) layout guide: ST AN5724/)).toBeInTheDocument()
+    // 54 against 55 is well inside the guide's 10 percent.
+    expect(screen.getByText('54 Ω')).toHaveStyle({ color: 'var(--mantine-color-green-text)' })
+  })
+
+  it('shows a range as the guide gives it and judges from its nearer end', () => {
+    renderUI(
+      <InterfacePicker
+        interfaces={[
+          iface({
+            kind: 'ddr',
+            impedance: {
+              computed: true,
+              microstrip: false,
+              in_range: true,
+              single_ended_ohms: 40,
+              diff_ohms: 88,
+              target_single_ended_ohms: 40,
+              target_diff_ohms: 80,
+              target_diff_max_ohms: 90,
+              chip: 'RK3588',
+              chip_ref: 'U1',
+              chip_connected: true,
+              target_source: 'RK3588 Hardware Design Guide V1.0',
+              layer: 'In1.Cu',
+            },
+          }),
+        ]}
+        selected={[]}
+        onChange={vi.fn()}
+        families={families}
+      />,
+    )
+    expect(screen.getByText('(RK3588 asks for 80 to 90 Ω)')).toBeInTheDocument()
+  })
+
+  it('says when the chip is known but its guide gives no figure', () => {
+    renderUI(
+      <InterfacePicker
+        interfaces={[
+          iface({
+            kind: 'usb2',
+            impedance: {
+              computed: true,
+              microstrip: true,
+              in_range: true,
+              single_ended_ohms: 50,
+              diff_ohms: 90,
+              target_diff_ohms: 90,
+              chip: 'STM32MP2',
+              chip_ref: 'U1',
+              chip_connected: true,
+              layer: 'F.Cu',
+            },
+          }),
+        ]}
+        selected={[]}
+        onChange={vi.fn()}
+        families={families}
+      />,
+    )
+    expect(screen.getByText('(usually 90 Ω)')).toBeInTheDocument()
+    expect(screen.getByText(/No figure for this from the STM32MP2 \(U1\) guides yet/)).toBeInTheDocument()
+  })
+
+  it('says the figure is the usual one when no controller is recognized', () => {
+    renderUI(
+      <InterfacePicker interfaces={[iface()]} selected={[]} onChange={vi.fn()} families={families} />,
+    )
+    expect(screen.getByText(/No known controller found here/)).toBeInTheDocument()
   })
 
   it('shows the measured impedance beside what the family wants', () => {

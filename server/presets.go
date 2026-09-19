@@ -2,8 +2,10 @@ package server
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/embeddedci-com/pcb-autorouter/ddr"
+	"github.com/embeddedci-com/pcb-autorouter/proto"
 )
 
 // The published rule sets, as parameters the form can apply.
@@ -24,6 +26,67 @@ type PresetInfo struct {
 	// showing the parameters would put a number the vendor never wrote
 	// beside a citation of the vendor's document.
 	Unstated []string `json:"unstated,omitempty"`
+
+	// Impedance is what the guides of the preset's chips ask for, one entry
+	// per chip. An entry with no targets is a chip whose guide this tool has
+	// no figures from, so the page can say so rather than stay silent.
+	Impedance []ChipImpedanceInfo `json:"impedance,omitempty"`
+}
+
+// ChipImpedanceInfo is one chip's impedance figures, protocol by protocol.
+type ChipImpedanceInfo struct {
+	Chip    string                `json:"chip"`
+	Targets []ImpedanceTargetInfo `json:"targets,omitempty"`
+}
+
+// ImpedanceTargetInfo is one protocol's figures on one chip. A Max is the top
+// of a range where the guide gives one.
+type ImpedanceTargetInfo struct {
+	Kind               string  `json:"kind"`
+	Label              string  `json:"label"`
+	SingleEndedOhms    float64 `json:"single_ended_ohms,omitempty"`
+	SingleEndedMaxOhms float64 `json:"single_ended_max_ohms,omitempty"`
+	DiffOhms           float64 `json:"diff_ohms,omitempty"`
+	DiffMaxOhms        float64 `json:"diff_max_ohms,omitempty"`
+	Note               string  `json:"note,omitempty"`
+	Source             string  `json:"source"`
+}
+
+// presetImpedance is the impedance figures for a preset's parts. Parts with no
+// figures share one entry: "SAMA5D3, ATSAMA5D3" is one chip written two ways.
+func presetImpedance(p ddr.Preset) []ChipImpedanceInfo {
+	var out []ChipImpedanceInfo
+	var unknown []string
+	seen := map[string]bool{}
+	for _, part := range p.Parts {
+		c, ok := proto.ChipForPart(part)
+		if !ok {
+			unknown = append(unknown, part)
+			continue
+		}
+		if seen[c.Name] {
+			continue
+		}
+		seen[c.Name] = true
+		info := ChipImpedanceInfo{Chip: c.Name}
+		for _, t := range c.Targets {
+			label := string(t.Kind)
+			if f, ok := proto.FamilyOf(t.Kind); ok {
+				label = f.Label
+			}
+			info.Targets = append(info.Targets, ImpedanceTargetInfo{
+				Kind: string(t.Kind), Label: label,
+				SingleEndedOhms: t.SingleEnded.Nominal, SingleEndedMaxOhms: t.SingleEnded.Max,
+				DiffOhms: t.Differential.Nominal, DiffMaxOhms: t.Differential.Max,
+				Note: t.Note, Source: t.Source,
+			})
+		}
+		out = append(out, info)
+	}
+	if len(unknown) > 0 {
+		out = append(out, ChipImpedanceInfo{Chip: strings.Join(unknown, ", ")})
+	}
+	return out
 }
 
 // PresetParams are the parameters a preset decides. The names match Params,
@@ -87,7 +150,7 @@ func KnownPresets() []PresetInfo {
 		if v.MaxChipDeltaMM <= 0 {
 			v.MaxChipDeltaMM, unstated = d.MaxChipDeltaMM, append(unstated, "max_chip_delta_mm")
 		}
-		out = append(out, PresetInfo{Preset: p, Params: v, Unstated: unstated})
+		out = append(out, PresetInfo{Preset: p, Params: v, Unstated: unstated, Impedance: presetImpedance(p)})
 	}
 	return out
 }

@@ -259,7 +259,8 @@ export interface GeometryInfo {
 }
 
 /**
- * What the geometry comes out at, against what the family usually asks for.
+ * What the geometry comes out at, against what the controller's layout guide
+ * asks for, or the family's usual figure where there is no such guide.
  *
  * An estimate from closed-form models and the stackup in the board file. A
  * board that has to hold its impedance to a few percent needs the fabricator's
@@ -271,6 +272,16 @@ export interface ImpedanceInfo {
   diff_ohms?: number
   target_single_ended_ohms?: number
   target_diff_ohms?: number
+  /** The top of a target range where the guide gives one ("80 to 90 Ω"). */
+  target_single_ended_max_ohms?: number
+  target_diff_max_ohms?: number
+  /** The controller recognized on this interface, and its footprint. */
+  chip?: string
+  chip_ref?: string
+  /** False when the chip has no pad on these nets and is just the only recognized one on the board. */
+  chip_connected?: boolean
+  /** The guide the targets come from. Empty means they are the family's usual figures. */
+  target_source?: string
   /** False when there was no width to work from: everything else here is then meaningless. */
   computed: boolean
   microstrip: boolean
@@ -760,6 +771,29 @@ export interface Preset {
   unstated?: string[]
   /** The parameters it sets. One unit of each limit is zero: guides state one or the other. */
   params: PresetParams
+  /**
+   * What the guides of its chips ask for, one entry per chip. An entry with no
+   * targets is a chip this tool has no figures for.
+   */
+  impedance?: ChipImpedance[]
+}
+
+/** One chip's impedance figures, protocol by protocol. */
+export interface ChipImpedance {
+  chip: string
+  targets?: ImpedanceTarget[]
+}
+
+/** One protocol's figures on one chip. A max is the top of a range the guide gives. */
+export interface ImpedanceTarget {
+  kind: string
+  label: string
+  single_ended_ohms?: number
+  single_ended_max_ohms?: number
+  diff_ohms?: number
+  diff_max_ohms?: number
+  note?: string
+  source: string
 }
 
 export interface PresetParams {

@@ -3,7 +3,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Alert, Anchor, Button, Card, Group, Loader, Stack, Table, Text, Title } from '@mantine/core'
 import { ApiError, type AnalyzerApi } from '../lib/analyzerApi'
 import { UploadForm } from '../components/UploadForm'
@@ -53,7 +53,8 @@ export function HomePage({ api }: { api: AnalyzerApi }) {
           <UnitToggle />
         </Group>
         <Text c="dimmed" mb="md">
-          Check trace length matching on a KiCad board.
+          Check trace length matching on a KiCad board. Prefer to work inside KiCad? Install it as a{' '}
+          <Anchor component={Link} to="/docs/kicad-plugins">plugin</Anchor>.
         </Text>
         <WhatThisDoes
           maxUploadBytes={defaults.data?.max_upload_bytes}

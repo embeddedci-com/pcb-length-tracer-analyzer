@@ -72,16 +72,28 @@ function typicalNames(f: FamilyInfo): string {
 /**
  * How far off a target an impedance is, as a colour.
  *
- * Ten per cent is the line because that is roughly where the closed-form model
- * stops being able to tell a real problem from its own error — closer than that
- * and only a field solver on the fabricator's stackup can say.
+ * Ten per cent is the line because that is what the vendor guides allow, and
+ * roughly where the closed-form model stops being able to tell a real problem
+ * from its own error. A target given as a range counts from its nearer end.
  */
-function impedanceColour(got: number | undefined, target: number | undefined): string | undefined {
-  if (!got || !target) return undefined
-  const off = Math.abs(got - target) / target
+function impedanceColour(got: number | undefined, target: Target | undefined): string | undefined {
+  if (!got || !target?.ohms) return undefined
+  const top = target.max ?? target.ohms
+  const nearest = got < target.ohms ? target.ohms : got > top ? top : got
+  const off = Math.abs(got - nearest) / nearest
   if (off <= 0.1) return 'green'
   if (off <= 0.2) return 'orange'
   return 'red'
+}
+
+/** One impedance target, a range where the guide gives one. */
+interface Target {
+  ohms?: number
+  max?: number
+}
+
+function ohms(t: Target): string {
+  return t.max ? `${t.ohms} to ${t.max} Ω` : `${t.ohms} Ω`
 }
 
 /** A short word for the family, for the badge. */
@@ -256,7 +268,11 @@ export function InterfacePicker({
                   </Text>
                 ) : null}
 
-                <ImpedanceRow iface={i} family={familyOf.get(current(i.id).kind ?? i.kind)} />
+                <ImpedanceRow
+                  iface={i}
+                  family={familyOf.get(current(i.id).kind ?? i.kind)}
+                  reassigned={(current(i.id).kind ?? i.kind) !== i.kind}
+                />
 
                 {(i.groups?.length ?? 0) > 0 && (
                   <div>
@@ -373,20 +389,42 @@ export function InterfacePicker({
 }
 
 /**
- * What the geometry comes out at, beside what the family usually asks for.
+ * What the geometry comes out at, beside what the controller's guide asks for.
  *
  * Shown as an estimate and labelled as one. The closed forms here are good for
  * catching a width nowhere near its target; a board that has to hold its
  * impedance to a few percent needs the fabricator's stackup and a field solver,
  * and saying so is more useful than a figure to three decimal places.
+ *
+ * The target is the controller's own where its guide gives one, and says so
+ * with the document, because a generic figure can be the wrong one: ST asks for
+ * 55 Ω on STM32MP2 DDR4, where DDR4 is usually drawn to 40.
  */
-function ImpedanceRow({ iface, family }: { iface: DetectedInterface; family?: FamilyInfo }) {
+function ImpedanceRow({
+  iface,
+  family,
+  reassigned,
+}: {
+  iface: DetectedInterface
+  family?: FamilyInfo
+  reassigned: boolean
+}) {
   const z = iface.impedance
+  // A family picked but not yet analyzed has no server figures of its own, so
+  // the family's stand until it is.
+  const fromServer = !reassigned
   const target = {
-    se: family?.single_ended_ohms ?? z.target_single_ended_ohms,
-    diff: family?.diff_ohms ?? z.target_diff_ohms,
+    se: fromServer
+      ? { ohms: z.target_single_ended_ohms, max: z.target_single_ended_max_ohms }
+      : { ohms: family?.single_ended_ohms },
+    diff: fromServer
+      ? { ohms: z.target_diff_ohms, max: z.target_diff_max_ohms }
+      : { ohms: family?.diff_ohms },
   }
-  const note = family?.ohms_note ?? z.target_note
+  const note = fromServer ? z.target_note : family?.ohms_note
+  const vendor = fromServer && z.target_source ? z.chip : undefined
+  const word = vendor ? `${vendor} asks for` : 'usually'
+  const source = <TargetSource z={z} reassigned={reassigned} />
 
   if (!z.computed) {
     return (
@@ -394,10 +432,15 @@ function ImpedanceRow({ iface, family }: { iface: DetectedInterface; family?: Fa
         <Text size="sm">
           Nothing is routed here, so there is no width to work from. Give the track width above
           and this will say what it comes out at.
-          {target.diff ? ` This family is usually drawn to ${target.diff} Ω differential.` : ''}
-          {target.se ? ` Single-ended, usually ${target.se} Ω.` : ''}
+          {target.diff.ohms
+            ? vendor
+              ? ` ${vendor} asks for ${ohms(target.diff)} differential.`
+              : ` This family is usually drawn to ${ohms(target.diff)} differential.`
+            : ''}
+          {target.se.ohms ? ` Single-ended, ${word} ${ohms(target.se)}.` : ''}
           {note ? ` ${note}.` : ''}
         </Text>
+        {source}
       </Alert>
     )
   }
@@ -429,9 +472,9 @@ function ImpedanceRow({ iface, family }: { iface: DetectedInterface; family?: Fa
             <Text size="sm" fw={500} c={impedanceColour(z.single_ended_ohms, target.se)}>
               {z.single_ended_ohms} Ω
             </Text>
-            {target.se ? (
+            {target.se.ohms ? (
               <Text size="sm" c="dimmed">
-                (usually {target.se} Ω)
+                ({word} {ohms(target.se)})
               </Text>
             ) : null}
           </Group>
@@ -444,9 +487,9 @@ function ImpedanceRow({ iface, family }: { iface: DetectedInterface; family?: Fa
             <Text size="sm" fw={500} c={impedanceColour(z.diff_ohms, target.diff)}>
               {z.diff_ohms} Ω
             </Text>
-            {target.diff ? (
+            {target.diff.ohms ? (
               <Text size="sm" c="dimmed">
-                (usually {target.diff} Ω)
+                ({word} {ohms(target.diff)})
               </Text>
             ) : null}
           </Group>
@@ -460,11 +503,37 @@ function ImpedanceRow({ iface, family }: { iface: DetectedInterface; family?: Fa
           : ''}
         {note ? ` ${note}.` : ''}
       </Text>
+      {source}
       {family && typicalNames(family) ? (
         <Text size="xs" c="dimmed" mt={4}>
-          A {family.label} link usually carries {typicalNames(family)}.
+          {/^[AEIOU]/.test(family.label) ? 'An' : 'A'} {family.label} link usually carries {typicalNames(family)}.
         </Text>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * Where the impedance targets came from: the controller's guide, or the usual
+ * figure and why.
+ */
+function TargetSource({ z, reassigned }: { z: DetectedInterface['impedance']; reassigned: boolean }) {
+  if (reassigned) return null
+  const where = z.chip_ref ? ` (${z.chip_ref})` : ''
+  let text: string
+  if (z.chip && z.target_source) {
+    text = `From the ${z.chip}${where} layout guide: ${z.target_source}.`
+    if (!z.chip_connected) {
+      text += ` ${z.chip_ref} is the only ${z.chip} on the board, so its guide is taken to apply here.`
+    }
+  } else if (z.chip) {
+    text = `No figure for this from the ${z.chip}${where} guides yet, so these are the usual ones.`
+  } else {
+    text = 'No known controller found here, so these are the usual figures. Your controller\'s layout guide governs.'
+  }
+  return (
+    <Text size="xs" c="dimmed" mt={4}>
+      {text}
+    </Text>
   )
 }

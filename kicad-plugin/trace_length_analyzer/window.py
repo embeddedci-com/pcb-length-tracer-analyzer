@@ -114,7 +114,9 @@ class AnalyzerWindow(QMainWindow):
 
     def _routes(self):
         routes = {
-            "select": lambda p: self.ctl.on_kicad(lambda: self.ctl.select(list(p.get("nets") or []))),
+            "select": lambda p: self._then_show_kicad(
+                self.ctl.on_kicad(lambda: self.ctl.select(list(p.get("nets") or [])))
+            ),
             "rescan": lambda p: self.ctl.on_kicad(lambda: {"session": self.ctl.rescan()}),
         }
         # Not offered at all while switched off, so no request from the page
@@ -122,6 +124,31 @@ class AnalyzerWindow(QMainWindow):
         if APPLY_ENABLED:
             routes["apply"] = lambda p: self.ctl.on_kicad(lambda: self.ctl.apply(str(p.get("session") or "")))
         return routes
+
+    def _then_show_kicad(self, fut):
+        """Bring KiCad forward once a selection from the page has landed.
+
+        Selecting nets is asking to look at them, and they are in KiCad: without
+        this the user has to click KiCad before they can see or use what was
+        selected. Nothing moves when the selection failed or was empty, so an
+        error or "nothing to select" stays on screen to be read.
+        """
+
+        def landed(f) -> None:
+            try:
+                res = f.result()
+            except Exception:  # noqa: BLE001 -- the page reports the error
+                return
+            if (res or {}).get("selected"):
+                self._bridge.done.emit(lambda *_: self._show_kicad(), (None, None))
+
+        fut.add_done_callback(landed)
+        return fut
+
+    def _show_kicad(self) -> None:
+        from .macos import activate_kicad
+
+        activate_kicad()
 
     # ---- toolbar ----
 
@@ -235,6 +262,7 @@ class AnalyzerWindow(QMainWindow):
                 self.statusBar().showMessage("Every matched net is within tolerance", 8000)
             else:
                 self.statusBar().showMessage(f"Selected {n} net{'s' if n != 1 else ''} out of tolerance in KiCad", 8000)
+                self._show_kicad()
 
         self._run_kicad(work, done)
 

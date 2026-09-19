@@ -156,4 +156,46 @@ describe('SupportedChips', () => {
     expect(screen.getByText('STM32MP25x, DDR4')).toBeInTheDocument()
     expect(screen.getByText(/i.MX 8M Mini and i.MX 8M Quad, LPDDR4$/)).toBeInTheDocument()
   })
+
+  it("shows each chip's impedance figures and names a chip it has none for", async () => {
+    const user = userEvent.setup()
+    renderUI(
+      <SupportedChips
+        presets={[
+          preset({
+            impedance: [
+              {
+                chip: 'Example 1',
+                targets: [
+                  {
+                    kind: 'ddr',
+                    label: 'DDR memory',
+                    single_ended_ohms: 40,
+                    diff_ohms: 80,
+                    diff_max_ohms: 90,
+                    source: 'Example Design Guide V1.0, table 3-7',
+                  },
+                  { kind: 'usb2', label: 'USB 2.0', diff_ohms: 90, source: 'Example Design Guide V1.0, table 3-18' },
+                ],
+              },
+              { chip: 'Example 2' },
+            ],
+          }),
+        ]}
+      />,
+    )
+    await user.click(screen.getByText(/Chips with vendor rules/))
+    await user.click(screen.getByText('Example 1, LPDDR4'))
+    expect(screen.getByText('40 Ω, 80 to 90 Ω differential')).toBeInTheDocument()
+    expect(screen.getByText('90 Ω differential')).toBeInTheDocument()
+    expect(screen.getByText(/table 3-7; Example Design Guide V1.0, table 3-18/)).toBeInTheDocument()
+    expect(screen.getByText(/No figures from the Example 2 guide yet/)).toBeInTheDocument()
+  })
+
+  it("puts ST's DDR impedance for the STM32MP25 on its summary line", async () => {
+    const user = userEvent.setup()
+    renderUI(<SupportedChips presets={PRESET_CATALOG.filter((p) => p.id === 'st-stm32mp25-ddr4')} />)
+    await user.click(screen.getByText(/Chips with vendor rules/))
+    expect(screen.getByText(/^data .*, 55 Ω, 100 Ω differential$/)).toBeInTheDocument()
+  })
 })

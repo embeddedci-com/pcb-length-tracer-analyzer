@@ -182,18 +182,28 @@ func midpoint(t *board.Track) geom.Pt {
 
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
 
-// Impedance is what an interface's geometry comes out at, against what its
-// family usually asks for.
+// ImpedanceCheck is what an interface's geometry comes out at, against what
+// its controller's guide asks for, or its family's usual figure where the
+// controller is not recognised or its guide is silent.
 type ImpedanceCheck struct {
 	// SingleEnded and Differential are the computed figures.
 	SingleEnded, Differential board.Impedance
 
-	// TargetSingleEnded and TargetDifferential are the family's usual numbers,
-	// zero where it has none worth stating.
-	TargetSingleEnded, TargetDifferential float64
+	// TargetSingleEnded and TargetDifferential are the numbers to hold to,
+	// zero where there is none worth stating: the controller's own where its
+	// guide gives one, the family's usual figure otherwise. The Max figures
+	// are the top of a range where the guide gives one, zero otherwise.
+	TargetSingleEnded, TargetDifferential       float64
+	TargetSingleEndedMax, TargetDifferentialMax float64
 
 	// TargetNote qualifies the targets.
 	TargetNote string
+
+	// Chip is the controller recognised on these nets, nil when there is
+	// none. TargetSource is its guide, empty when the guide gives no figure
+	// for this protocol and the family's figures stand.
+	Chip         *ChipMatch
+	TargetSource string
 
 	// Layer is what the figures were computed for, and LayerAssumed is true
 	// when nothing was routed to read it from.
@@ -222,6 +232,14 @@ func (i *Interface) CheckImpedance(b *board.Board, g Geometry) ImpedanceCheck {
 		out.TargetSingleEnded = f.SingleEndedOhms
 		out.TargetDifferential = f.DiffOhms
 		out.TargetNote = f.OhmsNote
+	}
+	if m, ok := ChipFor(b, i.Nets); ok {
+		out.Chip = &m
+		if t, ok := m.Chip.Target(i.Kind); ok {
+			out.TargetSingleEnded, out.TargetSingleEndedMax = t.SingleEnded.Nominal, t.SingleEnded.Max
+			out.TargetDifferential, out.TargetDifferentialMax = t.Differential.Nominal, t.Differential.Max
+			out.TargetNote, out.TargetSource = t.Note, t.Source
+		}
 	}
 	if g.WidthMM <= 0 {
 		return out

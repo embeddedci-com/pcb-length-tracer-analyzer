@@ -12,7 +12,7 @@
  */
 
 import { Accordion, Anchor, Badge, Group, Stack, Table, Text, Title } from '@mantine/core'
-import type { Preset } from '../lib/analyzerApi'
+import type { ChipImpedance, ImpedanceTarget, Preset } from '../lib/analyzerApi'
 import { PRESET_CATALOG } from '../lib/presets.generated'
 import { mm } from '../lib/format'
 
@@ -50,12 +50,96 @@ function unstated(preset: Preset, key: keyof Preset['params']): boolean {
   return (preset.unstated ?? []).includes(key)
 }
 
+/** An impedance figure as the guide gives it, a range where it gives one. */
+function ohms(v?: number, max?: number): string {
+  return max ? `${v} to ${max} Ω` : `${v} Ω`
+}
+
+/** A target's figures in one line: "55 Ω, 100 Ω differential". */
+function figures(t: ImpedanceTarget): string {
+  return [
+    t.single_ended_ohms ? ohms(t.single_ended_ohms, t.single_ended_max_ohms) : '',
+    t.diff_ohms ? `${ohms(t.diff_ohms, t.diff_max_ohms)} differential` : '',
+  ]
+    .filter(Boolean)
+    .join(', ')
+}
+
+/** The DDR figures when every chip of the preset agrees on them, for the summary line. */
+function ddrImpedance(p: Preset): string | undefined {
+  const all = (p.impedance ?? []).map((c) => c.targets?.find((t) => t.kind === 'ddr'))
+  if (all.length === 0 || all.some((t) => !t)) return undefined
+  const lines = new Set(all.map((t) => figures(t as ImpedanceTarget)))
+  return lines.size === 1 ? [...lines][0] : undefined
+}
+
 /** The headline numbers, so the row says something without being opened. */
 function summary(p: Preset): string {
+  const z = ddrImpedance(p)
   return `data ${limit(p.params.data_to_strobe_mm, p.params.data_to_strobe_ps)}, address ${limit(
     p.params.address_to_clock_mm,
     p.params.address_to_clock_ps,
-  )}`
+  )}${z ? `, ${z}` : ''}`
+}
+
+/**
+ * What each chip's guide asks for in impedance, every protocol it covers.
+ *
+ * A chip without figures is named rather than left out, so nobody reads the
+ * silence as "no requirement".
+ */
+function Impedance({ chips }: { chips: ChipImpedance[] }) {
+  return (
+    <Stack gap={4}>
+      <Text size="sm" fw={500}>
+        Impedance
+      </Text>
+      {chips.map((c) => {
+        const sources = [...new Set((c.targets ?? []).map((t) => t.source))]
+        return (
+          <div key={c.chip}>
+            {chips.length > 1 && (
+              <Text size="xs" fw={600}>
+                {c.chip}
+              </Text>
+            )}
+            {c.targets && c.targets.length > 0 ? (
+              <>
+                <Table verticalSpacing={2} withTableBorder>
+                  <Table.Tbody>
+                    {c.targets.map((t) => (
+                      <Table.Tr key={t.kind}>
+                        <Table.Td>
+                          <Text size="sm">{t.label}</Text>
+                          {t.note && (
+                            <Text size="xs" c="dimmed">
+                              {t.note}
+                            </Text>
+                          )}
+                        </Table.Td>
+                        <Table.Td ta="right">
+                          <Text size="sm" ff="monospace">
+                            {figures(t)}
+                          </Text>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+                <Text size="xs" c="dimmed">
+                  Source: {sources.join('; ')}. All ±10%.
+                </Text>
+              </>
+            ) : (
+              <Text size="xs" c="dimmed">
+                No figures from the {c.chip} guide yet, so the usual ones apply.
+              </Text>
+            )}
+          </div>
+        )
+      })}
+    </Stack>
+  )
 }
 
 function Chip({ preset }: { preset: Preset }) {
@@ -97,6 +181,7 @@ function Chip({ preset }: { preset: Preset }) {
               ))}
             </Table.Tbody>
           </Table>
+          {preset.impedance && preset.impedance.length > 0 && <Impedance chips={preset.impedance} />}
           {preset.parts && preset.parts.length > 0 && (
             <Text size="xs" c="dimmed">
               Parts: {preset.parts.join(', ')}
